@@ -1,0 +1,174 @@
+import type { EntityType } from "@yna/core";
+
+/**
+ * Hub 마스터 화면(대시보드·통합 검색·스타트업 마스터)의 도메인 타입.
+ * (근거: yna_suite_hub_dev_functional_spec.md §4~7, yna_suite_data_model.md §4)
+ *
+ * 실제 조회/변경은 Docker/staging 에서 hub 스키마에 연결하고(이슈19·21),
+ * 현재는 mock seam 으로 화면·배선·안전장치·감사 흐름을 검증한다.
+ */
+
+/** hub.* verification_status. */
+export type VerificationStatus =
+  | "pending"
+  | "verified"
+  | "rejected"
+  | "needs_review"
+  | "temporary";
+
+/** hub.* 생명주기 status. */
+export type MasterStatus = "active" | "merged" | "archived" | "deleted";
+
+/** hub.startups 마스터 레코드. */
+export interface StartupMaster {
+  id: string;
+  masterCode: string;
+  name: string;
+  legalName: string | null;
+  normalizedName: string;
+  businessNumber: string | null;
+  corporationNumber: string | null;
+  representativeName: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  address: string | null;
+  industry: string | null;
+  stage: string | null;
+  sourceDomain: string | null;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+  /** merged 된 경우 최종 마스터 id. */
+  mergedIntoId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 전문가/협력사는 Phase 1.7 에서 상세를 구현한다. 여기서는 대시보드 집계·통합 검색 대상만. */
+export interface SimpleMaster {
+  id: string;
+  entityType: EntityType;
+  masterCode: string;
+  name: string;
+  normalizedName: string;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+}
+
+/** hub.master_identifiers. */
+export interface MasterIdentifier {
+  id: string;
+  identifierType: string;
+  identifierValue: string;
+  normalizedValue: string;
+  isPrimary: boolean;
+  sourceDomain: string | null;
+  createdAt: string;
+}
+
+/** hub.master_aliases. */
+export interface MasterAlias {
+  id: string;
+  aliasType: string;
+  aliasValue: string;
+  normalizedValue: string;
+  sourceDomain: string | null;
+  createdAt: string;
+}
+
+/** hub.master_field_history. */
+export interface FieldHistoryEntry {
+  id: string;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changeReason: string | null;
+  changedBy: string | null;
+  changedAt: string;
+}
+
+/** 상세의 중복 후보 요약(반대편 마스터 기준). */
+export interface MergeCandidateSummary {
+  id: string;
+  otherId: string;
+  otherMasterCode: string;
+  otherName: string;
+  score: number;
+  reasons: string[];
+  status: string;
+}
+
+/** hub.audit_logs 요약 항목. */
+export interface AuditEntry {
+  id: string;
+  actorName: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+/** 스타트업 마스터 상세 화면 데이터. (functional_spec §7 섹션 구성) */
+export interface StartupDetail {
+  master: StartupMaster;
+  identifiers: MasterIdentifier[];
+  aliases: MasterAlias[];
+  fieldHistory: FieldHistoryEntry[];
+  mergeCandidates: MergeCandidateSummary[];
+  auditSummary: AuditEntry[];
+  /** 관련 업무 이력 요약(Work 등). 실제 집계는 도메인 앱 연결 후. */
+  relatedWork: { label: string; count: number }[];
+}
+
+/** Hub 대시보드 위젯 집계. (functional_spec §4) */
+export interface DashboardCounts {
+  startups: number;
+  experts: number;
+  partners: number;
+  pendingMasters: number;
+  pendingMergeCandidates: number;
+}
+
+/** 대시보드 최근 병합 이벤트. */
+export interface RecentMergeEvent {
+  id: string;
+  entityType: EntityType;
+  sourceName: string;
+  targetId: string;
+  targetName: string;
+  syncStatus: string;
+  createdAt: string;
+}
+
+/** 대시보드 최근 import batch. */
+export interface RecentImportBatch {
+  id: string;
+  sourceName: string;
+  entityType: EntityType;
+  status: string;
+  totalRows: number;
+  processedRows: number;
+  failedRows: number;
+  startedAt: string;
+}
+
+/** 통합 검색 결과 항목. (functional_spec §5, api_contracts §6) */
+export interface MasterSearchResult {
+  id: string;
+  entityType: EntityType;
+  masterCode: string;
+  name: string;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+  matchedFields: string[];
+  score: number;
+}
+
+/** 서버 액션 공통 결과. */
+export interface ActionResult {
+  ok: boolean;
+  error?: string;
+  /** 생성된 마스터의 id(신규 생성 시 상세로 이동). */
+  createdId?: string;
+}

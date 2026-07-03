@@ -30,6 +30,21 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.6 Y&A Hub — 스타트업 마스터
+*   **완료**:
+    *   **Hub 데이터 계층**(`apps/hub/src/lib/hub-data/`): `types.ts`(StartupMaster/SimpleMaster/식별자·별칭·필드이력·중복후보·감사·대시보드·검색결과), `masters.ts`(순수 헬퍼 — `makeMasterCode`·`EDITABLE_STARTUP_FIELDS`·`scoreMatch` 검색점수·`toSearchResult`), `mock-seed.ts`(startup 6종[검증/임시/병합 포함]·expert 3·partner 3·식별자·별칭·필드이력·중복후보·병합이벤트·import batch·감사 seed), `mock-store.ts`(globalThis in-memory + 조회/검색/대시보드 집계 + 수정/식별자/별칭/상태/생성 mutation), `service.ts`(server-only, 폴백=mock/설정=이슈21 오류 seam), `actions.ts`(`updateStartupBasic`/`addIdentifier`/`addAlias`/`setStartupStatus`/`createStartup` — 사유 필수·merged 제한·field_history·normalized·중복방지·감사·revalidate), `display.ts`(검증/상태 배지·엔티티/식별자/별칭/액션 라벨·날짜).
+    *   **공통 마스킹**(`@yna/utils/format`): `maskBusinessNumber`(앞3자리)·`maskName`(가운데 마스킹) + `format.test.ts` 8개(utils 총 12 pass).
+    *   **화면 4종**(`apps/hub/src/app/(app)/`): `/`(대시보드 — 실 mock 집계 5카드 + 최근 병합/import 위젯, 클릭 이동), `/search`(통합 검색 — 네이티브 GET 폼, 3종 마스터, 병합 포함 옵션), `/startups`(목록 — 필터/검증필터/정렬/페이지·마스킹·신규 등록), `/startups/[id]`(상세 — 기본정보 그리드·식별자·별칭·중복후보·필드이력·업무요약·감사요약 + 수정/식별자/별칭/상태 dialog, merged 배너·수정 제한).
+    *   **컴포넌트**(`apps/hub/src/components/`): `dashboard/stat-card`, `search/search-results`, `startups/*`(startups-table·create-startup-dialog·startup-detail-view·detail-sections·edit-startup-dialog·master-add-dialog·status-change-dialog). `@yna/ui` 네이티브 primitive(Table/Select/ConfirmDialog/FilterBar/MasterCodeBadge/StatusBadge) 재사용, 새 의존성 없음.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 utils 12 + master-data 2 + permissions 29 pass, `pnpm build`(hub/dev) 2/2. **hub 프로덕션 실행 후 5개 라우트 HTTP 200(`/`·`/startups`·`/startups/st-1`·`/startups/st-temp`·`/search`) + 없는 마스터 404**, mock 렌더 확인(대시보드 집계·목록 마스킹[`123-**`·`홍*동`]·검색 매칭·상세 전 섹션·merged 배너/이동 링크).
+    *   **미검증(이슈21)**: Docker 미설치로 실제 hub 스키마 조회·수정·RLS 적용은 미검증. 데이터 seam 은 env 설정 시 명시적 오류로 막아둠.
+*   **다음 작업**: **Phase 1.7 Y&A Hub — 전문가·협력사 마스터** — 전문가/협력사 목록·상세(동명이인 자동병합 금지, 협력사 partner_type·사업자번호 중복 반영). hub-data seam 에 expert/partner 상세를 확장(현재 SimpleMaster 시드를 상세 모델로 승격), 통합 검색의 전문가/협력사 상세 링크 활성화.
+*   **주의점**:
+    *   실데이터 경로는 mock seam(`hub-data/service.ts`·`actions.ts`) — Docker/staging 에서 `supabase db reset`→`gen types` 후 hub 스키마 쿼리 + RPC(`create_temporary_master`/`search_master_candidates`)를 seam 에 붙인다(이슈21). mock 은 globalThis 캐시라 hub 서버 프로세스 내에서만 상태 유지(재시작 시 seed 리셋).
+    *   포트 3000 stale 서버가 자주 남음 — smoke 전 `netstat -ano | grep :3000` 로 점유 프로세스 종료 필요(이전 handoff 와 동일).
+    *   목록 "신규 등록"은 TEMP 임시 마스터 생성까지만(중복 후보 자동 생성은 1.8/1.10, 이슈22). 통합 검색·대시보드는 전문가/협력사를 SimpleMaster 로만 포함(상세는 1.7).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.5 Y&A Dev — 사용자 및 권한 관리
 *   **완료**:
     *   **권한 변경 로직**(`packages/permissions/admin.ts`): 순수 함수 — `normalizePermission`(can_write→can_read 강제, global/self scope_id 정리), `validatePermissionInput`(과거 expires_at/누락 scope 대상 거부), `permissionEquals`/`diffPermissions`(감사 before/after), `isMasterLevelChange`/`isMasterRole`(확인 dialog 판정), `applyOverrides`(템플릿+override), `externalLinkGrant`(guest_startup→work company/scope_id, guest_expert→work self). 단위 테스트 17개 추가(permissions 총 29 pass).

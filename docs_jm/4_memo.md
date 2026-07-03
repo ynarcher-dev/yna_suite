@@ -124,6 +124,22 @@
 *   **문제**: Rule 8.3(외부 패키지 추가는 사전 승인)·미사용 의존성 금지. 새 의존성을 추가할지, 네이티브로 갈지 결정 필요.
 *   **해결**: 사용자 결정으로 **외부 패키지 없이 네이티브 구현**(AppShell 의 네이티브 `<details>` 선례와 동일 방침). `packages/ui` 에 `Select`(네이티브 `<select>`)·`Switch`(role=switch button)·`Table`(시맨틱 `<table>`, design_system §12 규격)·`ConfirmDialog`(controlled 오버레이, Escape 취소·확인 포커스) 추가. `PermissionMatrix`/`DomainAccessSwitch`(design_system §10 — dev 소유)는 `apps/dev` 에서 이 primitive 로 조립. Radix/TanStack 은 실제 필요(복잡한 a11y/가상 스크롤)가 생기면 재검토.
 
+## 1-6. Hub 스타트업 마스터 메모 (Phase 1.6, 2026-07-03)
+
+### 📌 이슈 21: Hub 마스터 실데이터 경로를 mock seam 으로 대체(무-Docker) (작성일자: 2026-07-03)
+*   **상황**: Phase 1.6(대시보드·통합 검색·스타트업 마스터 목록/상세·수정)은 `hub.startups`/`master_identifiers`/`master_aliases`/`master_field_history`/`merge_candidates`/`audit_logs` 조회·변경을 필요로 함.
+*   **문제**: 이 기기는 Docker 미설치로 로컬 Supabase 를 못 띄우고(이슈15·17·19), 운영 DB 직접 접속은 금지라 실제 hub 스키마를 읽고 쓸 수 없음. `packages/database/src/types.ts` 도 아직 placeholder.
+*   **해결**: 이슈19(dev)와 동일 방침으로 **데이터 계층을 분기(seam)** 로 구현. `apps/hub/src/lib/hub-data/service.ts`·`actions.ts` 는 `isSupabaseConfigured=false`(dev 폴백)면 `mock-store.ts`(globalThis in-memory, seed=`mock-seed.ts`)로 화면·필터·수정·field_history·감사 흐름을 실제로 구동하고, env 가 설정된 경우(운영/스테이징)에는 명시적 오류를 던져 미완성 실데이터 경로가 조용히 노출되지 않게 함. Docker/staging 에서 `supabase db reset`→`gen types` 후 이 seam 에 실제 쿼리(hub 스키마 조회 + RPC `create_temporary_master`/`search_master_candidates`)를 붙이면 됨.
+
+### 📌 이슈 22: 1.6 범위 경계 — 전문가/협력사 상세·중복후보 파이프라인 이연 (작성일자: 2026-07-03)
+*   **상황**: functional_spec §6 은 목록 필수기능에 "신규 생성"을, §5 통합 검색은 3종 마스터(스타트업/전문가/협력사)를 모두 대상으로 함. 그러나 전문가/협력사 상세(§8·9)는 Phase 1.7, 임시 마스터 생성 파이프라인·중복 후보 자동 생성(§10·11)은 Phase 1.8/1.10 항목임.
+*   **문제**: 1.6 에서 어디까지 만들지 경계가 필요. 전 범위를 당기면 1.7/1.8/1.10 과 중복되고, 통합 검색에서 전문가/협력사를 빼면 §5 미충족.
+*   **해결**: (1) 통합 검색·대시보드 집계는 전문가/협력사를 **최소 필드(SimpleMaster)** 로 mock 시드에 포함해 검색·카운트가 실제로 동작. 단, 상세 링크는 스타트업만 활성(전문가/협력사 행은 비링크, 상세는 1.7). (2) 목록 "신규 등록"은 **TEMP 임시 마스터 생성 + audit** 까지만 구현하고, normalized identifier 파이프라인·중복 후보 자동 생성(`merge_candidates`)은 1.8/1.10 으로 이연(`mockCreateStartup` 주석 명시). 상세의 중복 후보 섹션은 seed 된 후보를 조회·표시만 함(승인/반려 액션은 1.10).
+
+### 📌 이슈 23: 개인정보 마스킹 유틸 확장 + 목록/상세 노출 분리 (작성일자: 2026-07-03)
+*   **상황**: 규칙5·security_policy 상 목록 화면의 대표자/사업자번호/전화/이메일은 마스킹, 상세는 권한자+audit 전제 원본 노출.
+*   **해결**: `@yna/utils/format` 에 `maskBusinessNumber`(앞 3자리)·`maskName`(가운데 마스킹) 추가(+단위 테스트 8개). 스타트업 **목록**은 대표자명·사업자번호를 마스킹, **상세**는 원본 노출(상세 진입 자체가 hub read 권한자 + 향후 조회 audit 대상). 식별자 섹션은 민감 식별자(business/corporation/phone/email) 값을 마스킹 표시.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

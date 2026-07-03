@@ -152,17 +152,18 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 외부 사용자 연결**
     *   guest_startup(→startup_id, scope=company), guest_expert(→expert_id, scope=self) 연결(`externalLinkGrant` + `linkExternalUser`). 외부 사용자는 hub/dev 권한 제거로 직접 접근 불가.
 
-### [ ] Phase 1.6 Y&A Hub — 스타트업 마스터
+### [x] Phase 1.6 Y&A Hub — 스타트업 마스터
 *(근거: yna_suite_hub_dev_functional_spec.md §4~7)*
+> 진행: Hub 대시보드(실 mock 집계+최근 병합/import 위젯), 통합 검색(네이티브 GET 폼, 3종 마스터), 스타트업 목록(필터/정렬/페이지·마스킹·신규 등록), 상세(기본정보·식별자·별칭·필드이력·중복후보·업무요약·감사요약 + 수정/식별자/별칭/상태 액션, merged 수정 제한). `apps/hub/src/lib/hub-data` mock seam(이슈21), `@yna/utils` 마스킹 2종+테스트. typecheck 10/10·lint 10/10·test(utils 12+master-data 2+permissions 29)·build 2/2·hub smoke(5개 라우트 HTTP 200 + 404 + mock 렌더). **무-Docker라 실데이터는 mock seam 으로 구동, 전문가/협력사 상세는 1.7, 중복후보 자동생성 파이프라인은 1.8/1.10 로 이연.** (2026-07-03)
 
-*   **[ ] Hub 대시보드**
-    *   스타트업/전문가/협력사 마스터 수, pending 마스터·pending 병합 후보 수, 최근 병합 이벤트, 최근 import batch 상태 위젯.
-*   **[ ] 통합 검색**
-    *   name/legal_name/alias/식별자/대표자명 대상 검색, entity_type·상태 필터, 마스터 코드·검증 상태 표시, merged 기본 제외.
-*   **[ ] 스타트업 마스터 목록**
-    *   master_code·name·legal_name·대표자·사업자번호·검증상태·상태·유입출처·수정일 컬럼, 검색/필터/정렬/페이지네이션, 민감 필드 마스킹.
-*   **[ ] 스타트업 마스터 상세/수정**
-    *   기본정보·식별자·별칭·필드 변경 이력·관련 업무 이력 요약·중복 후보·감사 로그 요약 섹션. 수정 시 field_history 기록, 민감 변경 audit log, merged source 수정 제한.
+*   **[x] Hub 대시보드**
+    *   스타트업/전문가/협력사 마스터 수, pending 마스터·pending 병합 후보 수, 최근 병합 이벤트, 최근 import batch 상태 위젯. 숫자 클릭 시 관련 목록 이동, 최근 병합은 target 마스터 상세로 이동.
+*   **[x] 통합 검색**
+    *   name/legal_name/alias/식별자/대표자명 대상 검색, entity_type·병합 포함 필터, 마스터 코드·검증 상태 표시, merged 기본 제외(include_merged 옵션). 서버 컴포넌트+네이티브 GET 폼(무의존).
+*   **[x] 스타트업 마스터 목록**
+    *   master_code·name·legal_name·대표자·사업자번호·검증상태·상태·유입출처·수정일 컬럼, 검색/상태·검증 필터/정렬/페이지네이션, 사업자번호·대표자명 마스킹, 모바일 핵심 컬럼만. 쓰기 권한 시 신규 등록(TEMP 임시 마스터).
+*   **[x] 스타트업 마스터 상세/수정**
+    *   기본정보·식별자·별칭·필드 변경 이력·관련 업무 이력 요약·중복 후보·감사 로그 요약 섹션. 수정 시 변경 필드마다 field_history 기록, 사유 필수, 민감 변경 audit log, merged source 수정 제한. 식별자/별칭 추가 시 normalized 생성·중복 방지.
 
 ### [ ] Phase 1.7 Y&A Hub — 전문가 · 협력사 마스터
 *(근거: yna_suite_hub_dev_functional_spec.md §8~9)*

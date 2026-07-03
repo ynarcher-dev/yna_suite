@@ -20,3 +20,18 @@ export function maskPhone(phone: string): string {
   if (digits.length < 4) return "***";
   return `***-****-${digits.slice(-4)}`;
 }
+
+/** 사업자등록번호 마스킹: 앞 3자리만 노출(123-**-*****). */
+export function maskBusinessNumber(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length < 3) return "***";
+  return `${digits.slice(0, 3)}-**-*****`;
+}
+
+/** 이름 마스킹: 성/끝 글자만 노출(홍*동, 두 글자는 홍*). 목록의 대표자명 등에 사용. */
+export function maskName(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= 1) return trimmed || "***";
+  if (trimmed.length === 2) return `${trimmed[0]}*`;
+  return `${trimmed[0]}${"*".repeat(trimmed.length - 2)}${trimmed[trimmed.length - 1]}`;
+}
