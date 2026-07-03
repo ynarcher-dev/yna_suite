@@ -30,6 +30,26 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.3 Supabase 스키마 및 마이그레이션 기반
+*   **완료**:
+    *   **논리 스키마**(`supabase/migrations/20260703171001_create_schemas_and_helpers.sql`): `hub/dev/staging` 우선 + `work/mna/project/fund/management` 스키마 뼈대(테이블 없음). 공통 `dev.set_updated_at()` 트리거 함수 등록.
+    *   **hub 마스터 원장**(`171002`): `startups`/`experts`/`partners`/`managers`. master_code UNIQUE, normalized_name·status 인덱스, `startups.business_number` 부분 unique, `partners.business_number` 부분 인덱스, `managers.user_id` UNIQUE(auth.users 1:1). updated_at 트리거 4개.
+    *   **hub 마스터 부속**(`171003`): `master_aliases`/`master_identifiers`/`master_field_history`. `master_identifiers` (entity_type,identifier_type,normalized_value) 중복 방지 unique + (entity_type,entity_id)·normalized 인덱스. 다형 참조라 entity_id 는 FK 없이 인덱스만.
+    *   **hub 병합**(`171004`): `merge_candidates`(entity_type/status·source·target 인덱스)/`merge_events`(sync_status 워커 폴링 인덱스, before/after_snapshot NOT NULL).
+    *   **hub 공통**(`171005`): `audit_logs`(domain/entity·actor·created_at 인덱스)/`attachments`(domain/entity 인덱스, 본체는 Storage).
+    *   **dev 권한**(`171006`): `user_permissions`(PK user_id+domain_name, updated_at 트리거)/`permission_templates`(role_key PK, 선포함)/`permission_audit_logs`(target·actor·created_at 인덱스).
+    *   **RLS 기본 deny**(`171007`): hub/dev 14개 테이블 `ENABLE ROW LEVEL SECURITY`(정책 없음 = 기본 차단, service_role 만 통과). 실제 정책은 Phase 1.4.
+    *   `packages/database/src/types.ts` 주석 갱신(gen types 는 DB 필요 → 미실행 사유 명시).
+*   **현재 상태**:
+    *   SQL 문법을 실제 Postgres 파서(libpg_query WASM, `pg-query-emscripten`)로 오프라인 검증 → 7개 파일 **82 statements ALL_PASS**. `pnpm typecheck` 10/10 통과.
+    *   **미검증**: Docker 미설치로 `supabase db reset`(로컬 적용)·`supabase gen types` 미실행. FK 대상(`auth.users`) 존재/의미 검증은 실제 적용 시 확인 필요.
+*   **다음 작업**: **Phase 1.4 인증 및 권한 기반** — Supabase Auth 로그인 연동, `packages/permissions` 권한 helper, JWT `app_metadata.permissions`(+expires_at) No-Join 주입, RLS helper(`dev.can_read_domain`/`can_write_domain`)·기본 RLS 정책, UI 권한 처리(demo-session → 실제 JWT 교체).
+*   **주의점**:
+    *   RLS 를 1.3에서 default deny 로 켰으므로, 1.4에서 명시 허용 정책을 붙이기 전까지 authenticated 경로로는 hub/dev 테이블 조회가 막힘(의도된 동작, 이슈12).
+    *   `dev.permission_templates` 초기 템플릿 8종(master/executive/…/viewer) seed 는 1.4/1.5에서 별도 처리.
+    *   Docker 있는 기기/staging 링크에서 `supabase db reset` → `supabase gen types typescript --local > packages/database/src/types.ts` 로 타입 대체 필요(이슈15).
+    *   기존 `20260703063409_remote_schema.sql`(빈 파일, remote baseline)은 신규 migration 보다 앞서 실행되며 내용 없음.
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.2 공통 디자인 시스템 · UI · AppShell
 *   **완료**:
     *   **디자인 토큰**(`packages/ui/src/tokens/`): `colors`(red 25~900 / gray 0~900 / semantic success·warning·info), `typography`(Pretendard 스택 + 7단계 타입 스케일), `spacing`(4px grid + 규격 상수), `radius`(sm4/md6/lg8), `shadows`(dropdown/popover/dialog). `tailwind-preset.ts`를 토큰 기반으로 재작성 → 앱에서 `bg-brand`/`text-gray-700` 등으로 사용. `bg-brand` = `rgb(226 34 19)`(#E22213) 컴파일 확인.

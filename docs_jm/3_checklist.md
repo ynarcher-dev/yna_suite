@@ -104,19 +104,20 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 완료 기준**
     *   Hub/Dev가 동일 AppShell 사용, 권한 없는 서비스 메뉴 미노출, 키보드 포커스 링(focus-visible ring) 표시, 모바일 drawer 전환 — smoke 로 Hub 렌더 확인.
 
-### [ ] Phase 1.3 Supabase 스키마 및 마이그레이션 기반
+### [x] Phase 1.3 Supabase 스키마 및 마이그레이션 기반
 *(근거: yna_suite_data_model.md, yna_suite_database_operations.md)*
+> 진행: hub/dev/staging + 도메인 스키마 뼈대, 우선순위1 테이블(+permission_templates) 14개 마이그레이션 7개, updated_at 트리거, RLS 기본 deny 활성화. SQL 문법 실제 Postgres 파서로 검증(82 stmts pass). **Docker 미설치로 로컬 적용·gen types 는 미검증(진행 기록/이슈15 참고).** (2026-07-03)
 
-*   **[ ] 논리 스키마 생성**
-    *   `hub`, `dev`, `staging` 우선 생성(`work` 등 나머지는 구조만 준비).
-*   **[ ] 우선순위 1 테이블 마이그레이션 작성**
-    *   `hub.startups`, `hub.experts`, `hub.partners`, `hub.managers`, `hub.master_aliases`, `hub.master_identifiers`, `hub.master_field_history`, `hub.merge_candidates`, `hub.merge_events`, `hub.audit_logs`, `hub.attachments`, `dev.user_permissions`, `dev.permission_audit_logs`.
-*   **[ ] 공통 컬럼/코드 정책 반영**
-    *   내부 PK는 UUID, 사람이 보는 값은 `master_code` 등 별도 unique. `created_by/updated_by/status` 공통 컬럼, soft delete 전제.
-*   **[ ] 인덱스/제약 반영**
-    *   `business_number` 부분 unique(NULL 허용), `normalized_name` 검색 인덱스, `master_identifiers` 중복 방지 unique.
-*   **[ ] Migration Only 원칙 확립**
-    *   운영 DB 직접 수정 금지, 모든 변경은 `supabase/migrations` 파일로만. `YYYYMMDDHHMMSS_*.sql` 명명 규칙.
+*   **[x] 논리 스키마 생성**
+    *   `hub`, `dev`, `staging` 우선 생성(`work/mna/project/fund/management`는 스키마 뼈대만). → `20260703171001`.
+*   **[x] 우선순위 1 테이블 마이그레이션 작성**
+    *   `hub.startups`, `hub.experts`, `hub.partners`, `hub.managers`, `hub.master_aliases`, `hub.master_identifiers`, `hub.master_field_history`, `hub.merge_candidates`, `hub.merge_events`, `hub.audit_logs`, `hub.attachments`, `dev.user_permissions`, `dev.permission_audit_logs` (+ `dev.permission_templates` 선포함, 이슈13). → `171002`~`171006`.
+*   **[x] 공통 컬럼/코드 정책 반영**
+    *   내부 PK는 UUID(`gen_random_uuid()`), 사람이 보는 값은 `master_code` 등 별도 unique. `created_by/updated_by/status` 공통 컬럼 + soft delete 전제, `dev.set_updated_at()` 트리거로 updated_at 자동 갱신(이슈14).
+*   **[x] 인덱스/제약 반영**
+    *   `startups.business_number` 부분 unique(NULL 허용), `normalized_name` 검색 인덱스, `master_identifiers` (entity_type,identifier_type,normalized_value) 중복 방지 unique, FK/status/sync_status 등 조회 인덱스.
+*   **[x] Migration Only 원칙 확립**
+    *   운영 DB 직접 수정 금지, 모든 변경은 `supabase/migrations` 파일로만. `YYYYMMDDHHMMSS_*.sql` 명명 규칙 준수. RLS 는 기본 deny 로 활성화(정책은 1.4, 이슈12).
 
 ### [ ] Phase 1.4 인증 및 권한 기반
 *(근거: yna_suite_auth_permissions.md, yna_suite_rls_policy_matrix.md)*

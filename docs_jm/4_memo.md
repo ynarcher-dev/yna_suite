@@ -71,6 +71,30 @@
 
 ---
 
+## 1-3. 스키마/마이그레이션 메모 (Phase 1.3, 2026-07-03)
+
+### 📌 이슈 12: RLS 기본 활성화(default deny)를 1.3에서 선반영 (작성일자: 2026-07-03)
+*   **상황**: 실제 RLS 정책 구현은 Phase 1.4 항목이지만, 테이블을 먼저 만들면 정책이 붙기 전까지 상태를 어떻게 둘지 결정 필요.
+*   **문제**: 정책 없이 테이블만 만들고 RLS 를 끄면, 서버/authenticated 경로에서 테이블이 사실상 열려 있게 되어 "권한 없음이 기본값" 원칙(database_operations §5, data_model §14)에 어긋남.
+*   **해결**: `20260703171007_enable_rls_default_deny.sql`에서 hub/dev 14개 테이블에 `ENABLE ROW LEVEL SECURITY`만 적용. 정책이 하나도 없으면 authenticated/anon 은 기본 deny, service_role(BYPASSRLS)만 접근 가능. read/write 분리·scope·외부 사용자 격리 정책은 Phase 1.4에서 별도 migration 으로 추가. 즉 1.3은 "닫아두고", 1.4에서 "명시 허용".
+
+### 📌 이슈 13: dev.permission_templates 를 1.3에 포함 (작성일자: 2026-07-03)
+*   **상황**: 체크리스트 1.3의 명시 테이블 목록에는 `dev.permission_templates`가 없지만, data_model §15 우선순위1에는 포함됨.
+*   **문제**: `dev.user_permissions.role_key`가 참조하는 역할 템플릿의 원본 테이블이 없으면 Phase 1.4/1.5 권한 부여 흐름의 근거가 비게 됨.
+*   **해결**: 우선순위1·기반 테이블이므로 `20260703171006`에 함께 생성. FK 강제는 두지 않고(템플릿 삭제/버전 관리 유연성) role_key 는 논리적 참조로 둠. 초기 템플릿 8종 seed 는 Phase 1.4/1.5에서 별도 처리.
+
+### 📌 이슈 14: 공통 updated_at 트리거 함수 위치 = dev.set_updated_at() (작성일자: 2026-07-03)
+*   **상황**: 다수 테이블의 `updated_at`을 UPDATE 시 자동 갱신하려면 공통 트리거 함수가 필요.
+*   **문제**: `public`에 함수를 두면 Data API(PostgREST)에 RPC 로 노출될 수 있고, 도메인 스키마(hub 등)에 두면 소유가 애매함.
+*   **해결**: 시스템/권한 담당 스키마인 `dev`에 `dev.set_updated_at()`를 만들고, updated_at 컬럼이 있는 테이블(startups/experts/partners/managers, user_permissions, permission_templates)에 BEFORE UPDATE 트리거로 재사용. created_at-only 이력/로그 테이블에는 트리거를 붙이지 않음.
+
+### 📌 이슈 15: Docker 미설치로 gen types/로컬 적용 미검증 (작성일자: 2026-07-03)
+*   **상황**: 마이그레이션 7개 작성 후 `supabase db reset`(로컬 적용)과 `supabase gen types`로 `packages/database/src/types.ts` 대체를 계획.
+*   **문제**: 현재 개발 환경은 Docker 미설치라 로컬 Supabase 를 띄울 수 없고, 원격 DB 직접 push 는 운영 DB 수정 금지 규칙상 불가.
+*   **해결**: SQL 문법은 실제 Postgres 파서(libpg_query WASM, pg-query-emscripten)로 오프라인 검증(82 statements ALL_PASS). 실제 적용/gen types 는 Docker 있는 기기 또는 staging 링크 환경에서 `supabase db reset` → `supabase gen types typescript --local > packages/database/src/types.ts` 로 수행 예정. 그전까지 `types.ts`는 placeholder 유지(주석에 사유 명시).
+
+---
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.
