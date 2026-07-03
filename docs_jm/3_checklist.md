@@ -174,15 +174,16 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 협력사 마스터 목록/상세**
     *   partner_type(LP/자문사/수행기관 등), 사업자번호·대표자·검증상태. 사업자번호 있으면 중복 후보에 강하게 반영(business_number_match 96점 시드).
 
-### [ ] Phase 1.8 마스터 검색/자동완성 API + 임시 마스터 생성
+### [x] Phase 1.8 마스터 검색/자동완성 API + 임시 마스터 생성
 *(근거: yna_suite_api_contracts.md §6~7, yna_suite_master_data_policy.md §7~9)*
+> 진행: 공통 API envelope·인증·권한 가드 + `GET /api/hub/master-search`, `POST /api/hub/masters/{entity_type}/temporary`(3종 공용) Route Handler. 순수 중복후보 점수 함수(`@yna/master-data`·§13 정책) + 임시 마스터 생성 시 규칙 기반 중복후보 자동생성(hub-data seam). 로컬 입력 UX(자동완성 Picker→기존 선택/없으면 임시 생성) 공용 dialog 를 스타트업/전문가/협력사 목록에 연결. typecheck 10/10·lint 10/10·test(master-data 8[신규 candidate 6]·permissions 29·utils 12)·build 2/2 + hub smoke(검색 200·validation 400·임시생성 201[startup 후보 2, partner 사업자번호 강매칭]·상세 200·404). **무-Docker라 API·store 는 mock seam 으로 구동(이슈25), 병합 후보 승인/반려는 Phase 1.10 이연.** (2026-07-03)
 
-*   **[ ] 마스터 검색 API**
-    *   `GET /api/hub/master-search`(entity_type·q·limit·include_merged), 매칭 필드·점수 반환. 모든 도메인 앱이 재사용할 공통 계약.
-*   **[ ] 임시 마스터 생성 API**
-    *   `POST /api/hub/masters/{entity_type}/temporary`. validation → normalized 생성 → TEMP 마스터 생성 → 식별자/별칭 저장 → 중복 후보 생성 → audit log.
-*   **[ ] 로컬 입력 UX 원칙 구현**
-    *   자동완성 우선 → 기존 선택 시 FK 연계 → 없으면 즉시 임시 생성(업무 흐름 막지 않음, pending 상태로 Hub 큐 전송).
+*   **[x] 마스터 검색 API**
+    *   `GET /api/hub/master-search`(entity_type·q·limit·include_merged), 매칭 필드·점수·display_label 반환. 공통 envelope(ok/error·request_id) + hub read 권한. 모든 도메인 앱이 재사용할 공통 계약.
+*   **[x] 임시 마스터 생성 API**
+    *   `POST /api/hub/masters/{entity_type}/temporary`(startup/expert/partner). validation → normalized 생성 → TEMP 마스터 생성 → 식별자(파생+명시)/별칭 저장 → 규칙 기반 중복 후보 생성 → audit log. hub write 권한, 201 응답에 merge_candidate_count 포함.
+*   **[x] 로컬 입력 UX 원칙 구현**
+    *   자동완성 우선(`MasterSearchPicker`가 입력값으로 검색 API 디바운스 호출) → 기존 마스터 선택 시 상세로 이동(중복 방지/FK 연계 데모) → 없으면 즉시 임시 생성(pending·중복후보 자동 큐잉). 스타트업/전문가/협력사 목록의 "신규 등록"이 이 공용 dialog + API 로 통일.
 
 ### [ ] Phase 1.9 식별자 · 별칭 · 필드 이력
 *(근거: yna_suite_master_data_policy.md §3~6·12, yna_suite_api_contracts.md §10~11)*

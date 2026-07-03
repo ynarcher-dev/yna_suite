@@ -7,7 +7,9 @@ import {
   mockListStartups,
   mockRecentImportBatches,
   mockRecentMergeEvents,
+  mockSearchApi,
   mockSearchMasters,
+  type MasterEntity,
 } from "./mock-store";
 import {
   mockGetExpertDetail,
@@ -15,10 +17,12 @@ import {
   mockListExperts,
   mockListPartners,
 } from "./mock-masters";
+import { mockCreateTemporaryMaster } from "./mock-temporary";
 import type {
   DashboardCounts,
   ExpertDetail,
   ExpertMaster,
+  MasterSearchApiItem,
   MasterSearchResult,
   PartnerDetail,
   PartnerMaster,
@@ -26,6 +30,8 @@ import type {
   RecentMergeEvent,
   StartupDetail,
   StartupMaster,
+  TemporaryMasterInput,
+  TemporaryMasterResult,
 } from "./types";
 
 /**
@@ -82,6 +88,34 @@ export async function searchMasters(args: {
   ensureFallback();
   if (!args.q.trim()) return [];
   return mockSearchMasters(args.q, args.entityType, args.includeMerged);
+}
+
+/**
+ * 마스터 검색(공통 계약). 단일 entity_type·매칭 필드·점수·표시 라벨을 낸다.
+ * (근거: api_contracts §6 — 모든 도메인 앱이 재사용)
+ */
+export async function searchMasterCandidates(args: {
+  entityType: MasterEntity;
+  q: string;
+  limit: number;
+  includeMerged: boolean;
+}): Promise<MasterSearchApiItem[]> {
+  ensureFallback();
+  if (!args.q.trim()) return [];
+  return mockSearchApi(args.entityType, args.q, args.includeMerged, args.limit);
+}
+
+/**
+ * 임시 마스터 생성(공통 계약). validation→normalized→TEMP 생성→식별자/별칭→중복 후보→audit.
+ * (근거: api_contracts §7, master_data_policy §7~9)
+ */
+export async function createTemporaryMaster(
+  entityType: MasterEntity,
+  input: TemporaryMasterInput,
+  actorName: string,
+): Promise<TemporaryMasterResult> {
+  ensureFallback();
+  return mockCreateTemporaryMaster(entityType, input, actorName);
 }
 
 export async function getDashboardCounts(): Promise<DashboardCounts> {

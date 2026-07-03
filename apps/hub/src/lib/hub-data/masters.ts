@@ -1,5 +1,11 @@
 import type { EntityType } from "@yna/core";
-import { normalizeCompanyName } from "@yna/utils";
+import {
+  normalizeBusinessNumber,
+  normalizeCompanyName,
+  normalizeEmail,
+  normalizePhone,
+  normalizeWebsiteDomain,
+} from "@yna/utils";
 import type { MasterSearchResult, MasterSummary, StartupMaster } from "./types";
 
 /**
@@ -73,6 +79,35 @@ export interface EditableFieldDef {
   key: string;
   label: string;
   sensitive: boolean;
+}
+
+/**
+ * 식별자 유형별 normalized_value 생성(순수). 원본은 보존하고 정규화만 저장한다.
+ * (근거: yna_suite_master_data_policy.md §5, api_contracts §10)
+ */
+export function normalizeIdentifierValue(type: string, value: string): string {
+  switch (type) {
+    case "business_number":
+    case "corporation_number":
+      return normalizeBusinessNumber(value);
+    case "founder_phone":
+    case "phone":
+      return normalizePhone(value);
+    case "founder_email":
+    case "email":
+      return normalizeEmail(value);
+    case "website_domain":
+      return normalizeWebsiteDomain(value);
+    default:
+      return value.trim().toLowerCase();
+  }
+}
+
+/** 대표자명 등 사람 이름의 비교용 정규화(공백 제거·소문자). */
+export function normalizePersonName(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const v = value.replace(/\s+/g, "").toLowerCase();
+  return v === "" ? null : v;
 }
 
 /** 쉼표 구분 문자열을 태그 배열로. 공백 제거·빈 값 제외. */

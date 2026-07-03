@@ -22,7 +22,7 @@ import { maskBusinessNumber, maskName } from "@yna/utils";
 import { usePermissions } from "@/lib/auth/permission-context";
 import { fmtDate, masterStatusMeta, verificationMeta } from "@/lib/hub-data/display";
 import type { MasterStatus, StartupMaster, VerificationStatus } from "@/lib/hub-data/types";
-import { CreateStartupDialog } from "./create-startup-dialog";
+import { MasterCreateDialog } from "@/components/masters/master-create-dialog";
 
 /**
  * 스타트업 마스터 목록. (근거: functional_spec §6)
@@ -201,7 +201,7 @@ export function StartupsTable({ startups }: { startups: StartupMaster[] }) {
         </>
       )}
 
-      <CreateStartupDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <MasterCreateDialog entityType="startup" open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

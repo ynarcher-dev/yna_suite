@@ -150,6 +150,18 @@
     *   **엔티티 공용화**: 식별자/별칭/필드이력/감사/중복후보를 `hub-data` 에서 엔티티 공용으로 다룬다. `mock-store` 에 `subTables(entityType,id)` 조회와 `updateMasterFields`/`addIdentifierRow`/`addAliasRow`/`setMasterStatus` 제네릭 mutation(+`appendAudit(entityType,…)`)을 두고, 스타트업 함수는 얇은 래퍼로 유지. 서버 액션은 `action-helpers` 의 `runAddIdentifier`/`runAddAlias`/`runSetStatus` 공용 runner + 엔티티별 `updateXBasic`(전문가는 전문분야 태그, 협력사는 partner_type diff 포함)으로 조립. 상세 화면 섹션과 수정/추가/상태 dialog 는 `components/masters/*` 공용 컴포넌트로 이관하고 스타트업도 이를 사용(startup 전용 4파일 삭제).
     *   Docker/staging 연결 시 `mock-store` 제네릭 mutation 과 `mock-masters` 조회만 실제 hub 스키마 쿼리/RPC 로 교체하면 3개 엔티티가 함께 실데이터로 전환된다(이슈21 seam 유지). 통합 검색은 전문가(이메일·소속)·협력사(사업자번호·대표자)로 매칭 필드를 확장하고 상세 링크를 활성화했다.
 
+## 1-8. 마스터 검색/임시 생성 API 메모 (Phase 1.8, 2026-07-03)
+
+### 📌 이슈 25: 마스터 검색·임시 생성을 HTTP API 로 승격 + mock seam 유지 (작성일자: 2026-07-03)
+*   **상황**: Phase 1.8 은 `GET /api/hub/master-search`·`POST /api/hub/masters/{entity_type}/temporary` 를 **모든 도메인 앱이 재사용하는 공통 계약**으로 만들 것을 요구한다(api_contracts §6·7). 1.6/1.7 의 생성/검색은 Hub 내부 서버 액션·`mockSearchMasters` 로만 존재했다.
+*   **문제**: (1) 실제 hub 스키마·RPC(`search_master_candidates`/`create_temporary_master`)는 Docker 미설치로 못 붙인다(이슈15·21). (2) 생성 시 중복 후보 자동 생성(§13 점수)이 아직 없었다. (3) 크로스오리진(Work 등 타 도메인 앱→Hub) 호출의 인증/CORS 는 아직 대상 앱이 없다.
+*   **해결**:
+    *   **HTTP Route Handler**(`app/api/hub/...`)로 계약을 실체화하되, service 는 이슈21 seam 을 그대로 탄다 — dev 폴백에선 mock store, env 설정 시 명시적 오류. 공통 envelope(`ok/data/meta.request_id` · `ok:false/error{code,message}`)·인증/권한 가드(`requireHubAccess`)를 `lib/api/`에 둔다.
+    *   **중복 후보 자동 생성**: `@yna/master-data` 에 순수 `scoreDuplicateCandidate`(§13 — 공식번호 일치=강한/상충=충돌 제외, 없으면 이름·대표자·연락처 합산 상한 94)를 추가하고, 임시 생성 직후 `generateCandidates`가 활성 동종 마스터와 비교해 pending 후보를 만든다. **자동 병합은 절대 하지 않음**(승인은 Phase 1.10).
+    *   **로컬 입력 UX**: 생성 dialog 는 same-origin fetch 로 검색 API 를 자동완성 호출하고(기존 선택=중복 방지/FK 연계), 없으면 임시 생성 API 를 호출한다. 서버 액션(수정/식별자/별칭/상태)은 유지하고 **생성만 API 로 승격**(중복후보 로직 중앙화).
+    *   **크로스오리진 인증/CORS** 는 실제 소비자(Work, Phase 2/1.13)가 생길 때 Supabase JWT 전달·허용 오리진과 함께 처리한다. 현재는 Hub 자체 소비만 검증.
+    *   한글 요청 본문은 `req.json()`이 UTF-8 로 정상 파싱하나, **curl inline `-d` 는 Windows 콘솔 인코딩으로 깨질 수 있어** smoke 는 UTF-8 파일(`--data-binary @`)로 검증했다(코드 문제 아님).
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

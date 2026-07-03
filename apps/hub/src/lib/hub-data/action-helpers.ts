@@ -1,14 +1,9 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import {
-  normalizeBusinessNumber,
-  normalizeEmail,
-  normalizePhone,
-  normalizeWebsiteDomain,
-} from "@yna/utils";
 import { normalizeCompanyName } from "@yna/utils";
 import { getSession } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/auth/env";
+import { normalizeIdentifierValue } from "./masters";
 import {
   addAliasRow,
   addIdentifierRow,
@@ -45,23 +40,7 @@ export function norm(v: string | null | undefined): string | null {
 }
 
 /** 식별자 유형별 normalized_value 생성. (data_quality: 원본 보존 + 정규화 저장) */
-export function normalizeIdentifier(type: string, value: string): string {
-  switch (type) {
-    case "business_number":
-    case "corporation_number":
-      return normalizeBusinessNumber(value);
-    case "founder_phone":
-    case "phone":
-      return normalizePhone(value);
-    case "founder_email":
-    case "email":
-      return normalizeEmail(value);
-    case "website_domain":
-      return normalizeWebsiteDomain(value);
-    default:
-      return value.trim().toLowerCase();
-  }
-}
+export const normalizeIdentifier = normalizeIdentifierValue;
 
 /** 목록/검색/상세 경로를 재검증한다. */
 export function revalidateMaster(listPath: string, id?: string): void {

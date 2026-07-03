@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.8 마스터 검색/자동완성 API + 임시 마스터 생성
+*   **완료**:
+    *   **중복후보 점수(순수, `@yna/master-data`)**: `merge/candidate.ts`(`scoreDuplicateCandidate(a,b)`→score/reasons/conflict, `shouldProposeCandidate`). §13 정책 반영 — 사업자/법인번호 일치=강한 식별자(96↑), 서로 다르면 **충돌로 후보 제외**(자동 병합 금지), 공식 번호 없으면 이름(정확 45/유사 25)·대표자(25)·전화(30)·이메일(30)·도메인(20) 합산 상한 94. 단위 테스트 6개(master-data 총 8 pass). reasons vocabulary 는 seed·상세화면과 동일(`business_number_match`/`normalized_name_exact`/`representative_name_match`/…).
+    *   **공통 API 계층**(`apps/hub/src/lib/api/`): `envelope.ts`(성공 `{ok,data,meta:{request_id,next_cursor}}`·실패 `{ok:false,error:{code,message,details}}`·코드→HTTP status·`ApiError`·`handleApiError`), `guard.ts`(`requireHubAccess('read'|'write')` — 세션 없으면 401, hub 권한 없으면 403).
+    *   **hub-data 승격**: `masters.ts`에 순수 `normalizeIdentifierValue`/`normalizePersonName`(action-helpers 는 재사용), `mock-temporary.ts`(3종 공용 `mockCreateTemporaryMaster` — TEMP 코드·temporary 검증·식별자 파생[startup/partner: business_number·founder_phone·founder_email·website_domain / expert: email·phone]+명시 식별자/별칭 정규화 저장·`comparableOf`로 비교필드 조립·`generateCandidates`로 활성 동종 마스터와 비교해 pending 후보 자동 생성·audit). `mock-store.ts`에 `displayLabelOf`·`mockSearchApi`(단일 entity_type+display_label), 구 `mockCreateStartup`은 제거. `api-map.ts`(snake_case↔camel 매핑·`isMasterEntity`·body 파싱). `service.ts`에 `searchMasterCandidates`/`createTemporaryMaster`.
+    *   **Route Handler**: `app/api/hub/master-search/route.ts`(GET — entity_type·q 필수, limit 1~100 기본 20, include_merged), `app/api/hub/masters/[entity_type]/temporary/route.ts`(POST — 201·merge_candidate_count).
+    *   **로컬 입력 UX**(`components/masters/`): `master-search-picker.tsx`(입력값 디바운스 300ms→검색 API, 기존 마스터 목록·선택 시 상세 이동), `master-create-config.ts`(엔티티별 폼 필드·`toTemporaryBody`·`DETAIL_BASE`), `master-create-dialog.tsx`(공용 신규등록 — 자동완성+폼→`POST .../temporary`→상세 이동). 스타트업 전용 `create-startup-dialog.tsx`·`createStartup` 액션 삭제, 3종 목록(startups/experts/partners) "신규 등록"을 공용 dialog+API 로 통일(전문가/협력사는 write 권한 시 신규 등록 신설).
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 master-data 8(candidate 6 신규)·permissions 29·utils 12 pass, `pnpm build`(hub/dev) 2/2(신규 API 2개 ƒ dynamic 등록). **hub 프로덕션 smoke**: 검색 `GET /api/hub/master-search`(startup "알파" 200·매칭필드/점수/display_label), validation 400(q 누락·잘못된 entity_type), 임시생성 `POST .../startup/temporary` 201(UTF-8 payload 로 후보 2 = st-1[94 name_exact+rep+phone]·st-temp[80 name_similar+rep+phone]), `POST .../partner/temporary` 201(사업자번호 일치 강매칭), name 누락/`manager` 400, 생성 마스터 상세 200, `/experts`·`/partners`·`/experts/ex-1`·`/partners/pt-2` 200, 검색 "이심사" 동명이인 ex-3·ex-9 별도, 없는 마스터 404.
+    *   **미검증(이슈25)**: Docker 미설치로 실제 hub 스키마·RLS·RPC(`search_master_candidates`/`create_temporary_master`)는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류). 크로스오리진(타 도메인 앱→Hub) 인증/CORS 는 Work 연결(Phase 2)에서 처리.
+*   **다음 작업**: **Phase 1.9 식별자·별칭·필드 이력** — `master_identifiers` primary 전환 트랜잭션·`master_aliases` 대표값 보존·`master_field_history` 출처/사유·목록 마스킹 원본 조회 audit. (1.6/1.7 에서 상세의 식별자/별칭/이력 표시·추가는 구현됨 → 1.9 는 primary 관리·삭제·API 계약 정합을 마저 채운다.)
+*   **주의점**:
+    *   중복후보 **점수/사유 vocabulary**는 `@yna/master-data`(순수) 단일 기준. Docker/staging 연결 시 `generateCandidates`·`comparableOf` 를 hub RPC/뷰로 교체하면 3종이 함께 전환된다(이슈21 seam 유지).
+    *   임시 생성은 **API(HTTP)** 가 계약이며 dialog 는 same-origin fetch 로 이를 호출한다. 서버 액션(수정/식별자/별칭/상태, 1.6/1.7)은 그대로 유지. 생성만 API 로 승격(중복후보 자동생성 중앙화).
+    *   한글 payload 는 curl inline `-d` 에서 콘솔 인코딩으로 깨질 수 있음 → smoke 는 `--data-binary @파일`(UTF-8)로 검증. 실제 브라우저 fetch 는 UTF-8 정상.
+    *   포트 3000 stale 서버 남으면 smoke 전 종료(이전 handoff 동일).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.7 Y&A Hub — 전문가 · 협력사 마스터
 *   **완료**:
     *   **hub-data 엔티티 공용화**: `types.ts`(SimpleMaster→`ExpertMaster`/`PartnerMaster`/`MasterSummary` + `ExpertDetail`/`PartnerDetail`), `masters.ts`(`EDITABLE_EXPERT_FIELDS`·`EDITABLE_PARTNER_FIELDS`·`parseTags`·toSearchResult 를 MasterSummary 로 일반화), `display.ts`(email/phone 식별자 라벨, `EXPERT_IDENTIFIER_TYPES`/`PARTNER_IDENTIFIER_TYPES`, `PARTNER_TYPES`·`partnerTypeLabel`, isSensitiveIdentifier 확장).

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   Button,
   EmptyState,
@@ -18,8 +19,10 @@ import {
   TR,
 } from "@yna/ui";
 import { maskEmail, maskPhone } from "@yna/utils";
+import { usePermissions } from "@/lib/auth/permission-context";
 import { fmtDate, masterStatusMeta, verificationMeta } from "@/lib/hub-data/display";
 import type { ExpertMaster, MasterStatus, VerificationStatus } from "@/lib/hub-data/types";
+import { MasterCreateDialog } from "@/components/masters/master-create-dialog";
 
 /**
  * 전문가 마스터 목록. (근거: functional_spec §8)
@@ -31,11 +34,13 @@ type SortKey = "updatedAt" | "name";
 
 export function ExpertsTable({ experts }: { experts: ExpertMaster[] }) {
   const router = useRouter();
+  const { canWriteCurrent } = usePermissions();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<MasterStatus | "">("");
   const [verif, setVerif] = useState<VerificationStatus | "">("");
   const [sort, setSort] = useState<SortKey>("updatedAt");
   const [page, setPage] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -67,7 +72,18 @@ export function ExpertsTable({ experts }: { experts: ExpertMaster[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <FilterBar trailing={<span className="text-sm text-gray-500">{filtered.length}명</span>}>
+      <FilterBar
+        trailing={
+          canWriteCurrent ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              신규 등록
+            </Button>
+          ) : (
+            <span className="text-sm text-gray-500">{filtered.length}명</span>
+          )
+        }
+      >
         <Input
           placeholder="이름·코드·소속·전문분야 검색"
           value={q}
@@ -184,6 +200,8 @@ export function ExpertsTable({ experts }: { experts: ExpertMaster[] }) {
           )}
         </>
       )}
+
+      <MasterCreateDialog entityType="expert" open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

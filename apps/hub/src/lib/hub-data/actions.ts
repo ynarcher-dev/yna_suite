@@ -1,7 +1,7 @@
 "use server";
 
 import { EDITABLE_STARTUP_FIELDS, type StartupEditInput } from "./masters";
-import { mockCreateStartup, mockGetStartupDetail, mockUpdateStartup, type FieldChange } from "./mock-store";
+import { mockGetStartupDetail, mockUpdateStartup, type FieldChange } from "./mock-store";
 import {
   actorName,
   guardConfigured,
@@ -106,32 +106,4 @@ export async function setStartupStatus(args: {
   reason: string;
 }): Promise<ActionResult> {
   return runSetStatus("startup", "/startups", mockGetStartupDetail(args.id), args);
-}
-
-export async function createStartup(args: {
-  name: string;
-  legalName?: string | null;
-  representativeName?: string | null;
-  businessNumber?: string | null;
-  phone?: string | null;
-  email?: string | null;
-}): Promise<ActionResult> {
-  const blocked = guardConfigured();
-  if (blocked) return blocked;
-  if (!args.name.trim()) return { ok: false, error: "표시명을 입력하세요." };
-
-  const created = mockCreateStartup(
-    {
-      name: args.name.trim(),
-      legalName: norm(args.legalName),
-      representativeName: norm(args.representativeName),
-      businessNumber: norm(args.businessNumber),
-      phone: norm(args.phone),
-      email: norm(args.email),
-      sourceDomain: "hub",
-    },
-    await actorName(),
-  );
-  revalidateMaster("/startups");
-  return { ok: true, createdId: created.id };
 }

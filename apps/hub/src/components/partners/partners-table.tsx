@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   Button,
   EmptyState,
@@ -18,8 +19,10 @@ import {
   TR,
 } from "@yna/ui";
 import { maskBusinessNumber, maskName } from "@yna/utils";
+import { usePermissions } from "@/lib/auth/permission-context";
 import { fmtDate, masterStatusMeta, partnerTypeLabel, PARTNER_TYPES, verificationMeta } from "@/lib/hub-data/display";
 import type { MasterStatus, PartnerMaster, VerificationStatus } from "@/lib/hub-data/types";
+import { MasterCreateDialog } from "@/components/masters/master-create-dialog";
 
 /**
  * 협력사 마스터 목록. (근거: functional_spec §9)
@@ -31,7 +34,9 @@ type SortKey = "updatedAt" | "name";
 
 export function PartnersTable({ partners }: { partners: PartnerMaster[] }) {
   const router = useRouter();
+  const { canWriteCurrent } = usePermissions();
   const [q, setQ] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const [ptype, setPtype] = useState("");
   const [status, setStatus] = useState<MasterStatus | "">("");
   const [verif, setVerif] = useState<VerificationStatus | "">("");
@@ -69,7 +74,18 @@ export function PartnersTable({ partners }: { partners: PartnerMaster[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <FilterBar trailing={<span className="text-sm text-gray-500">{filtered.length}곳</span>}>
+      <FilterBar
+        trailing={
+          canWriteCurrent ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              신규 등록
+            </Button>
+          ) : (
+            <span className="text-sm text-gray-500">{filtered.length}곳</span>
+          )
+        }
+      >
         <Input
           placeholder="기관명·코드·대표자 검색"
           value={q}
@@ -197,6 +213,8 @@ export function PartnersTable({ partners }: { partners: PartnerMaster[] }) {
           )}
         </>
       )}
+
+      <MasterCreateDialog entityType="partner" open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

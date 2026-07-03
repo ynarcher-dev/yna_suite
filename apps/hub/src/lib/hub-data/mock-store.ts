@@ -1,12 +1,13 @@
 import type { EntityType } from "@yna/core";
 import { normalizeCompanyName } from "@yna/utils";
-import { makeMasterCode, scoreMatch, toSearchResult, type StartupEditInput } from "./masters";
+import { scoreMatch, toSearchResult, type StartupEditInput } from "./masters";
 import { seedState, type MergeCandidateRow, type MockState } from "./mock-seed";
 import type {
   AuditEntry,
   DashboardCounts,
   MasterAlias,
   MasterIdentifier,
+  MasterSearchApiItem,
   MasterSearchResult,
   MergeCandidateSummary,
   StartupDetail,
@@ -305,6 +306,37 @@ export function mockSearchMasters(
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
+/** 검색 결과의 "이름 / 부가정보" 표시 라벨(엔티티별). (api_contracts §6 display_label) */
+export function displayLabelOf(entityType: MasterEntity, id: string): string {
+  const s = store();
+  if (entityType === "startup") {
+    const m = s.startups.find((x) => x.id === id);
+    if (!m) return "";
+    return m.representativeName ? `${m.name} / ${m.representativeName}` : m.name;
+  }
+  if (entityType === "expert") {
+    const m = s.experts.find((x) => x.id === id);
+    if (!m) return "";
+    return m.organization ? `${m.name} / ${m.organization}` : m.name;
+  }
+  const p = s.partners.find((x) => x.id === id);
+  if (!p) return "";
+  return p.representativeName ? `${p.name} / ${p.representativeName}` : p.name;
+}
+
+/** 마스터 검색 API 항목(단일 entity_type, display_label 포함). (api_contracts §6) */
+export function mockSearchApi(
+  entityType: MasterEntity,
+  q: string,
+  includeMerged: boolean,
+  limit: number,
+): MasterSearchApiItem[] {
+  return mockSearchMasters(q, entityType, includeMerged, limit).map((r) => ({
+    ...r,
+    displayLabel: displayLabelOf(entityType, r.id),
+  }));
+}
+
 export function mockDashboardCounts(): DashboardCounts {
   const s = store();
   const pending = (m: { verificationStatus: string; status: string }) =>
@@ -370,51 +402,6 @@ export function mockSetStartupStatus(
   reason: string,
 ): boolean {
   return setMasterStatus("startup", id, status, actorName, reason);
-}
-
-export interface CreateStartupInput {
-  name: string;
-  legalName: string | null;
-  representativeName: string | null;
-  businessNumber: string | null;
-  phone: string | null;
-  email: string | null;
-  sourceDomain: string;
-}
-
-/**
- * 신규(임시) 스타트업 마스터 생성. TEMP 코드·temporary 검증·audit 기록.
- * 중복 후보 자동 생성/식별자 파이프라인은 Phase 1.8/1.10 에서 연결한다(4_memo 이슈21).
- */
-export function mockCreateStartup(input: CreateStartupInput, actorName: string): StartupMaster {
-  const s = store();
-  const seq = ++s.startupSeq;
-  const now = new Date().toISOString();
-  const master: StartupMaster = {
-    id: `st-new-${seq}`,
-    masterCode: makeMasterCode("startup", seq, true, 2026),
-    name: input.name,
-    legalName: input.legalName,
-    normalizedName: normalizeCompanyName(input.name),
-    businessNumber: input.businessNumber,
-    corporationNumber: null,
-    representativeName: input.representativeName,
-    phone: input.phone,
-    email: input.email,
-    websiteUrl: null,
-    address: null,
-    industry: null,
-    stage: null,
-    sourceDomain: input.sourceDomain,
-    verificationStatus: "temporary",
-    status: "active",
-    mergedIntoId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-  s.startups.push(master);
-  appendAudit("startup", "create_temporary", master.id, actorName, "Hub 직접 신규 등록");
-  return clone(master);
 }
 
 export function mockListAudit(): AuditEntry[] {

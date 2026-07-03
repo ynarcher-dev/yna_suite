@@ -236,3 +236,46 @@ export interface ActionResult {
   /** 생성된 마스터의 id(신규 생성 시 상세로 이동). */
   createdId?: string;
 }
+
+/**
+ * 임시 마스터 생성 입력(엔티티 공용). (근거: api_contracts §7)
+ * 엔티티별로 쓰이는 필드가 다르며, 서버가 정규화·식별자 파생을 담당한다.
+ */
+export interface TemporaryMasterInput {
+  name: string;
+  legalName?: string | null;
+  representativeName?: string | null;
+  businessNumber?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  websiteUrl?: string | null;
+  /** 협력사 기관유형. */
+  partnerType?: string | null;
+  /** 전문가 소속/직함/전문분야. */
+  organization?: string | null;
+  position?: string | null;
+  expertiseTags?: string[];
+  /** 유입 도메인(hub/work/fund 등). */
+  sourceDomain: string;
+  /** 유입 원본 레코드 id(work.applications.id 등). */
+  sourceRecordId?: string | null;
+  identifiers?: { identifierType: string; identifierValue: string }[];
+  aliases?: { aliasType: string; aliasValue: string }[];
+}
+
+/** 임시 마스터 생성 결과(내부 표현). API 는 snake_case 로 투영한다. */
+export interface TemporaryMasterResult {
+  id: string;
+  entityType: EntityType;
+  masterCode: string;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+  /** 생성 직후 자동 생성된 중복 후보 수. */
+  mergeCandidateCount: number;
+}
+
+/** 마스터 검색 API 항목(내부 표현). API 는 snake_case + display_label 로 투영한다. */
+export interface MasterSearchApiItem extends MasterSearchResult {
+  /** "이름 / 대표자" 형태의 표시 라벨(엔티티별). */
+  displayLabel: string;
+}
