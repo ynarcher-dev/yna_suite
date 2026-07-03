@@ -7,10 +7,27 @@ import { normalizeIdentifierValue } from "./masters";
 import {
   addAliasRow,
   addIdentifierRow,
+  findAlias,
+  findIdentifier,
+  findMasterRef,
+  removeAlias,
+  removeIdentifier,
+  resolveEntityType,
+  revealIdentifier,
+  setIdentifierPrimary,
+  setIdentifierVerification,
   setMasterStatus,
   type MasterEntity,
+  type SubMutResult,
 } from "./mock-store";
-import type { ActionResult } from "./types";
+import type { ActionResult, IdentifierVerifiedStatus } from "./types";
+
+/** 마스터 엔티티별 목록 경로(재검증용). */
+export const LIST_PATH: Record<MasterEntity, string> = {
+  startup: "/startups",
+  expert: "/experts",
+  partner: "/partners",
+};
 
 /**
  * Hub 마스터 변경 서버 액션의 공통 헬퍼(스타트업/전문가/협력사 공용).
@@ -132,4 +149,88 @@ export async function runSetStatus(
   setMasterStatus(entityType, args.id, args.status, await actorName(), args.reason.trim());
   revalidateMaster(listPath, args.id);
   return { ok: true };
+}
+
+// ---- sub-record(식별자/별칭) 변경 공통 runner (엔티티 공용, id 로 소유 마스터 역참조) ----
+
+/** 변경 사유 + merged 마스터 제한 공통 가드(엔티티 id 기준). */
+function guardSubWritable(entityId: string, reason: string): ActionResult | null {
+  if (!reason.trim()) return { ok: false, error: "변경 사유를 입력하세요." };
+  const entityType = resolveEntityType(entityId);
+  if (!entityType) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  const master = findMasterRef(entityType, entityId);
+  if (!master) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  if (master.status === "merged") {
+    return { ok: false, error: "병합된 마스터는 수정할 수 없습니다." };
+  }
+  return null;
+}
+
+/** mutation 결과를 재검증 + ActionResult 로 변환한다. */
+function finishSub(res: SubMutResult): ActionResult {
+  if (!res.ok) return { ok: false, error: res.error };
+  if (res.entityType && res.entityId) revalidateMaster(LIST_PATH[res.entityType], res.entityId);
+  return { ok: true, value: res.value };
+}
+
+/** 대표 식별자 지정(트랜잭션). (api_contracts §10 — primary 변경) */
+export async function runSetPrimary(identifierId: string, reason: string): Promise<ActionResult> {
+  const blocked = guardConfigured();
+  if (blocked) return blocked;
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const guard = guardSubWritable(row.entityId, reason);
+  if (guard) return guard;
+  if (row.isPrimary) return { ok: false, error: "이미 대표 식별자입니다." };
+  return finishSub(setIdentifierPrimary(identifierId, await actorName(), reason.trim()));
+}
+
+/** 식별자 검증 상태 변경. (api_contracts §10 — PATCH) */
+export async function runVerifyIdentifier(
+  identifierId: string,
+  verifiedStatus: IdentifierVerifiedStatus,
+  reason: string,
+): Promise<ActionResult> {
+  const blocked = guardConfigured();
+  if (blocked) return blocked;
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const guard = guardSubWritable(row.entityId, reason);
+  if (guard) return guard;
+  if (row.verifiedStatus === verifiedStatus) return { ok: false, error: "이미 해당 검증 상태입니다." };
+  return finishSub(setIdentifierVerification(identifierId, verifiedStatus, await actorName(), reason.trim()));
+}
+
+/** 식별자 삭제. (api_contracts §10 — DELETE) */
+export async function runRemoveIdentifier(identifierId: string, reason: string): Promise<ActionResult> {
+  const blocked = guardConfigured();
+  if (blocked) return blocked;
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const guard = guardSubWritable(row.entityId, reason);
+  if (guard) return guard;
+  return finishSub(removeIdentifier(identifierId, await actorName(), reason.trim()));
+}
+
+/** 별칭 삭제. (api_contracts §11 — DELETE) */
+export async function runRemoveAlias(aliasId: string, reason: string): Promise<ActionResult> {
+  const blocked = guardConfigured();
+  if (blocked) return blocked;
+  const row = findAlias(aliasId);
+  if (!row) return { ok: false, error: "별칭을 찾을 수 없습니다." };
+  const guard = guardSubWritable(row.entityId, reason);
+  if (guard) return guard;
+  return finishSub(removeAlias(aliasId, await actorName(), reason.trim()));
+}
+
+/**
+ * 민감 식별자 원본 조회(audit 기록 후 원본값 반환).
+ * merged 마스터도 조회는 허용하되 사유는 고정 문구로 audit 한다(규칙5).
+ */
+export async function runRevealIdentifier(identifierId: string): Promise<ActionResult> {
+  const blocked = guardConfigured();
+  if (blocked) return blocked;
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  return finishSub(revealIdentifier(identifierId, await actorName(), "민감 식별자 원본 조회"));
 }

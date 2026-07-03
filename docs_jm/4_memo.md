@@ -162,6 +162,17 @@
     *   **크로스오리진 인증/CORS** 는 실제 소비자(Work, Phase 2/1.13)가 생길 때 Supabase JWT 전달·허용 오리진과 함께 처리한다. 현재는 Hub 자체 소비만 검증.
     *   한글 요청 본문은 `req.json()`이 UTF-8 로 정상 파싱하나, **curl inline `-d` 는 Windows 콘솔 인코딩으로 깨질 수 있어** smoke 는 UTF-8 파일(`--data-binary @`)로 검증했다(코드 문제 아님).
 
+## 1-9. 식별자·별칭·필드 이력 메모 (Phase 1.9, 2026-07-03)
+
+### 📌 이슈 26: 식별자/별칭 관리 이중 진입점(서버 액션 + HTTP 계약) + 마스킹 원본 조회 audit (작성일자: 2026-07-03)
+*   **상황**: Phase 1.9 는 식별자 primary 전환(트랜잭션)·검증상태·삭제, 별칭 삭제, 필드이력 출처, 목록 마스킹 원본 조회 audit 를 요구하고(master_data_policy §3~6·12), 이를 공통 API §10~11(`POST/PATCH/DELETE /api/hub/...`)로도 계약화해야 한다. 1.6/1.7 에서 식별자/별칭 **추가**는 서버 액션으로만 존재했다.
+*   **문제**: (1) UI 편의(사유 dialog·revalidate·reveal 인라인 반환)는 서버 액션이 자연스럽고, 크로스앱 재사용·계약 명세는 HTTP 라우트가 필요하다. (2) 실제 hub RPC/RLS 는 Docker 미설치로 못 붙인다(이슈15·21·25). (3) 상세 식별자 원본값은 RSC props 로 이미 클라이언트에 전달되는데(이슈23 목록 마스킹과 동일 구조) "원본 조회 audit" 를 어떻게 만족시키는지.
+*   **해결**:
+    *   **이중 진입점, 단일 mutation**: Hub 상세 UI 는 엔티티 공용 **서버 액션**(`actions-identifiers.ts` → `action-helpers` runner)을, 크로스앱은 **HTTP 라우트**(`service-subrecords.ts`, 공통 envelope/ApiError 코드)를 쓰되 **둘 다 같은 `mock-store` mutation**(`setIdentifierPrimary`/`setIdentifierVerification`/`removeIdentifier`/`removeAlias`/`addIdentifierRow`/`addAliasRow`)으로 수렴한다. Docker/staging 에서 mutation 만 hub RPC/쿼리로 교체하면 두 경로가 함께 전환된다(1.8 방침 연장 — "생성만 API 승격"에서 "관리도 API 계약 병행"으로 확장, 서버 액션 UI 는 유지).
+    *   **primary 트랜잭션**: `setIdentifierPrimary` 는 같은 (entityId, identifierType) 안에서 기존 primary 를 해제하고 대상만 설정한다. 정책 §5 "primary 하나만 지정"을 **식별자 유형별 단일 대표**로 해석(대표 전화 1개·대표 사업자번호 1개 공존 가능).
+    *   **원본 조회 audit**: 상세 "원본 보기"는 `revealIdentifierAction` → `view_sensitive` audit 를 남기고, 클라이언트가 이미 보유한 원본을 노출한다(마스킹은 UX, 최종 보안은 RLS — 이슈23 방침 동일). 실데이터 연결 시 원본 반환 endpoint 를 권한·마스킹과 함께 서버에서 강제한다.
+    *   **스키마 변경 없음**: `verified_status`(master_identifiers)·`source_domain`(master_field_history/master_aliases)은 1.3 마이그레이션(`171003`)에 이미 존재 → 타입/시드/UI 로만 표면화. 새 migration 불필요.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

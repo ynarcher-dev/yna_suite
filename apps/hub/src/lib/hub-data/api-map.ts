@@ -1,5 +1,18 @@
 import type { MasterEntity } from "./mock-store";
-import type { MasterSearchApiItem, TemporaryMasterInput, TemporaryMasterResult } from "./types";
+import type {
+  IdentifierVerifiedStatus,
+  MasterAlias,
+  MasterIdentifier,
+  MasterSearchApiItem,
+  TemporaryMasterInput,
+  TemporaryMasterResult,
+} from "./types";
+
+const VERIFIED_STATUSES: readonly IdentifierVerifiedStatus[] = ["unverified", "verified", "rejected"];
+
+export function isVerifiedStatus(v: unknown): v is IdentifierVerifiedStatus {
+  return typeof v === "string" && (VERIFIED_STATUSES as readonly string[]).includes(v);
+}
 
 /**
  * API 경계의 snake_case ↔ 내부 camelCase 매핑(순수).
@@ -14,6 +27,39 @@ export function isMasterEntity(v: unknown): v is MasterEntity {
 
 function str(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+}
+
+/** 식별자 생성 요청 body(snake_case) → 내부 입력. 검증은 라우트가 담당한다. (api_contracts §10) */
+export function mapAddIdentifierBody(body: Record<string, unknown>) {
+  return {
+    identifierType: str(body.identifier_type),
+    identifierValue: str(body.identifier_value),
+    isPrimary: body.is_primary === true,
+    reason: str(body.reason) ?? "API 식별자 추가",
+  };
+}
+
+/** 별칭 생성 요청 body(snake_case) → 내부 입력. (api_contracts §11) */
+export function mapAddAliasBody(body: Record<string, unknown>) {
+  return {
+    aliasType: str(body.alias_type),
+    aliasValue: str(body.alias_value),
+    reason: str(body.reason) ?? "API 별칭 추가",
+  };
+}
+
+/** 식별자 PATCH 요청 body(snake_case) → 내부 입력. (api_contracts §10) */
+export function mapPatchIdentifierBody(body: Record<string, unknown>) {
+  return {
+    isPrimary: body.is_primary === true ? true : undefined,
+    verifiedStatus: isVerifiedStatus(body.verified_status) ? body.verified_status : undefined,
+    reason: str(body.reason) ?? "API 식별자 변경",
+  };
+}
+
+/** DELETE 요청의 사유(body 또는 기본값). */
+export function deleteReason(body: Record<string, unknown> | null): string {
+  return (body && str(body.reason)) ?? "API 삭제";
 }
 
 /** 검색 결과 항목을 API(snake_case) 형태로 투영한다. */
@@ -40,6 +86,32 @@ export function toTemporaryApiData(result: TemporaryMasterResult) {
     verification_status: result.verificationStatus,
     status: result.status,
     merge_candidate_count: result.mergeCandidateCount,
+  };
+}
+
+/** 식별자 행을 API(snake_case) 형태로 투영한다. (api_contracts §10) */
+export function toIdentifierApiData(row: MasterIdentifier) {
+  return {
+    id: row.id,
+    identifier_type: row.identifierType,
+    identifier_value: row.identifierValue,
+    normalized_value: row.normalizedValue,
+    is_primary: row.isPrimary,
+    verified_status: row.verifiedStatus,
+    source_domain: row.sourceDomain,
+    created_at: row.createdAt,
+  };
+}
+
+/** 별칭 행을 API(snake_case) 형태로 투영한다. (api_contracts §11) */
+export function toAliasApiData(row: MasterAlias) {
+  return {
+    id: row.id,
+    alias_type: row.aliasType,
+    alias_value: row.aliasValue,
+    normalized_value: row.normalizedValue,
+    source_domain: row.sourceDomain,
+    created_at: row.createdAt,
   };
 }
 

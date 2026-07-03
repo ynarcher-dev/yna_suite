@@ -5,6 +5,7 @@ import { seedState, type MergeCandidateRow, type MockState } from "./mock-seed";
 import type {
   AuditEntry,
   DashboardCounts,
+  IdentifierVerifiedStatus,
   MasterAlias,
   MasterIdentifier,
   MasterSearchApiItem,
@@ -127,6 +128,7 @@ function pushFieldHistory(
   reason: string,
   actor: string,
   at: string,
+  sourceDomain = "hub",
 ): void {
   const s = store();
   s.fieldHistory.push({
@@ -135,6 +137,7 @@ function pushFieldHistory(
     fieldName: change.fieldName,
     oldValue: change.oldValue,
     newValue: change.newValue,
+    sourceDomain,
     changeReason: reason,
     changedBy: actor,
     changedAt: at,
@@ -170,22 +173,24 @@ export function addIdentifierRow(
   normalizedValue: string,
   actorName: string,
   reason: string,
-): boolean {
-  if (!findMasterRef(entityType, id)) return false;
+): string | null {
+  if (!findMasterRef(entityType, id)) return null;
   const s = store();
+  const rowId = `id-${++s.idSeq}`;
   const row: MasterIdentifier & { entityId: string } = {
-    id: `id-${++s.idSeq}`,
+    id: rowId,
     entityId: id,
     identifierType,
     identifierValue,
     normalizedValue,
     isPrimary: false,
+    verifiedStatus: "unverified",
     sourceDomain: "hub",
     createdAt: new Date().toISOString(),
   };
   s.identifiers.push(row);
   appendAudit(entityType, "add_identifier", id, actorName, reason);
-  return true;
+  return rowId;
 }
 
 export function addAliasRow(
@@ -196,11 +201,12 @@ export function addAliasRow(
   normalizedValue: string,
   actorName: string,
   reason: string,
-): boolean {
-  if (!findMasterRef(entityType, id)) return false;
+): string | null {
+  if (!findMasterRef(entityType, id)) return null;
   const s = store();
+  const rowId = `al-${++s.idSeq}`;
   const row: MasterAlias & { entityId: string } = {
-    id: `al-${++s.idSeq}`,
+    id: rowId,
     entityId: id,
     aliasType,
     aliasValue,
@@ -210,7 +216,7 @@ export function addAliasRow(
   };
   s.aliases.push(row);
   appendAudit(entityType, "add_alias", id, actorName, reason);
-  return true;
+  return rowId;
 }
 
 export function setMasterStatus(
@@ -234,6 +240,140 @@ export function setMasterStatus(
   );
   appendAudit(entityType, "set_status", id, actorName, reason);
   return true;
+}
+
+// ---- sub-record (identifier/alias) lookups & mutations ----
+
+/** 식별자/별칭/원본조회 mutation 결과. */
+export interface SubMutResult {
+  ok: boolean;
+  error?: string;
+  /** 소유 마스터 엔티티(호출부의 재검증 경로 판단용). */
+  entityType?: MasterEntity;
+  /** 소유 마스터 id. */
+  entityId?: string;
+  /** reveal 시 원본 식별자 값. */
+  value?: string;
+}
+
+type IdentifierRow = MasterIdentifier & { entityId: string };
+type AliasRow = MasterAlias & { entityId: string };
+
+export function findIdentifier(identifierId: string): IdentifierRow | undefined {
+  return store().identifiers.find((i) => i.id === identifierId);
+}
+
+export function findAlias(aliasId: string): AliasRow | undefined {
+  return store().aliases.find((a) => a.id === aliasId);
+}
+
+export function identifiersOf(entityId: string): IdentifierRow[] {
+  return store().identifiers.filter((i) => i.entityId === entityId);
+}
+
+export function aliasesOf(entityId: string): AliasRow[] {
+  return store().aliases.filter((a) => a.entityId === entityId);
+}
+
+/** entity_id 로 소유 마스터 엔티티 종류를 역참조한다(식별자/별칭 다형 참조). */
+export function resolveEntityType(entityId: string): MasterEntity | undefined {
+  const s = store();
+  if (s.startups.some((x) => x.id === entityId)) return "startup";
+  if (s.experts.some((x) => x.id === entityId)) return "expert";
+  if (s.partners.some((x) => x.id === entityId)) return "partner";
+  return undefined;
+}
+
+function ownerOf(entityId: string): { entityType: MasterEntity; status: string } | null {
+  const entityType = resolveEntityType(entityId);
+  if (!entityType) return null;
+  const master = findMasterRef(entityType, entityId);
+  if (!master) return null;
+  return { entityType, status: master.status };
+}
+
+/**
+ * 대표 식별자 지정(트랜잭션). 같은 (마스터, 식별자유형) 안에서 기존 primary 를 해제하고
+ * 대상만 primary 로 설정한다. (근거: master_data_policy §5 — primary 변경은 기존 해제 포함 트랜잭션)
+ */
+export function setIdentifierPrimary(
+  identifierId: string,
+  actorName: string,
+  reason: string,
+): SubMutResult {
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const owner = ownerOf(row.entityId);
+  if (!owner) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  for (const i of store().identifiers) {
+    if (i.entityId === row.entityId && i.identifierType === row.identifierType) {
+      i.isPrimary = i.id === identifierId;
+    }
+  }
+  appendAudit(owner.entityType, "set_primary", row.entityId, actorName, reason);
+  return { ok: true, entityType: owner.entityType, entityId: row.entityId };
+}
+
+/** 식별자 검증 상태 변경(verified/rejected/unverified). */
+export function setIdentifierVerification(
+  identifierId: string,
+  verifiedStatus: IdentifierVerifiedStatus,
+  actorName: string,
+  reason: string,
+): SubMutResult {
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const owner = ownerOf(row.entityId);
+  if (!owner) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  row.verifiedStatus = verifiedStatus;
+  appendAudit(owner.entityType, "verify_identifier", row.entityId, actorName, reason);
+  return { ok: true, entityType: owner.entityType, entityId: row.entityId };
+}
+
+/** 식별자 삭제(원본에서 제거 + audit). 대표값에서 밀려난 값은 alias/identifier 로 별도 보존한다. */
+export function removeIdentifier(
+  identifierId: string,
+  actorName: string,
+  reason: string,
+): SubMutResult {
+  const s = store();
+  const row = s.identifiers.find((i) => i.id === identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const owner = ownerOf(row.entityId);
+  if (!owner) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  s.identifiers = s.identifiers.filter((i) => i.id !== identifierId);
+  appendAudit(owner.entityType, "remove_identifier", row.entityId, actorName, reason);
+  return { ok: true, entityType: owner.entityType, entityId: row.entityId };
+}
+
+/** 별칭 삭제(원본에서 제거 + audit). (api_contracts §11) */
+export function removeAlias(
+  aliasId: string,
+  actorName: string,
+  reason: string,
+): SubMutResult {
+  const s = store();
+  const row = s.aliases.find((a) => a.id === aliasId);
+  if (!row) return { ok: false, error: "별칭을 찾을 수 없습니다." };
+  const owner = ownerOf(row.entityId);
+  if (!owner) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  s.aliases = s.aliases.filter((a) => a.id !== aliasId);
+  appendAudit(owner.entityType, "remove_alias", row.entityId, actorName, reason);
+  return { ok: true, entityType: owner.entityType, entityId: row.entityId };
+}
+
+/** 민감 식별자 원본 조회 — audit 기록 후 원본값을 반환한다. (규칙5 — 원본 조회는 권한자 + audit) */
+export function revealIdentifier(
+  identifierId: string,
+  actorName: string,
+  reason: string,
+): SubMutResult {
+  const row = findIdentifier(identifierId);
+  if (!row) return { ok: false, error: "식별자를 찾을 수 없습니다." };
+  const owner = ownerOf(row.entityId);
+  if (!owner) return { ok: false, error: "대상 마스터를 찾을 수 없습니다." };
+  appendAudit(owner.entityType, "view_sensitive", row.entityId, actorName, reason);
+  return { ok: true, entityType: owner.entityType, entityId: row.entityId, value: row.identifierValue };
 }
 
 // ---- startup reads ----
@@ -371,37 +511,6 @@ export function mockUpdateStartup(
   reason: string,
 ): boolean {
   return updateMasterFields("startup", id, next, changes, actorName, reason);
-}
-
-export function mockAddIdentifier(
-  id: string,
-  identifierType: string,
-  identifierValue: string,
-  normalizedValue: string,
-  actorName: string,
-  reason: string,
-): boolean {
-  return addIdentifierRow("startup", id, identifierType, identifierValue, normalizedValue, actorName, reason);
-}
-
-export function mockAddAlias(
-  id: string,
-  aliasType: string,
-  aliasValue: string,
-  normalizedValue: string,
-  actorName: string,
-  reason: string,
-): boolean {
-  return addAliasRow("startup", id, aliasType, aliasValue, normalizedValue, actorName, reason);
-}
-
-export function mockSetStartupStatus(
-  id: string,
-  status: "active" | "archived",
-  actorName: string,
-  reason: string,
-): boolean {
-  return setMasterStatus("startup", id, status, actorName, reason);
 }
 
 export function mockListAudit(): AuditEntry[] {

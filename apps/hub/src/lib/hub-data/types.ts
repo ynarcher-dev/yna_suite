@@ -95,6 +95,9 @@ export interface MasterSummary {
   status: MasterStatus;
 }
 
+/** hub.master_identifiers.verified_status. */
+export type IdentifierVerifiedStatus = "unverified" | "verified" | "rejected";
+
 /** hub.master_identifiers. */
 export interface MasterIdentifier {
   id: string;
@@ -102,6 +105,7 @@ export interface MasterIdentifier {
   identifierValue: string;
   normalizedValue: string;
   isPrimary: boolean;
+  verifiedStatus: IdentifierVerifiedStatus;
   sourceDomain: string | null;
   createdAt: string;
 }
@@ -122,6 +126,8 @@ export interface FieldHistoryEntry {
   fieldName: string;
   oldValue: string | null;
   newValue: string | null;
+  /** 변경 출처 도메인(hub/work/import 등). (data_model: master_field_history.source_domain) */
+  sourceDomain: string | null;
   changeReason: string | null;
   changedBy: string | null;
   changedAt: string;
@@ -235,6 +241,8 @@ export interface ActionResult {
   error?: string;
   /** 생성된 마스터의 id(신규 생성 시 상세로 이동). */
   createdId?: string;
+  /** 민감 식별자 원본 조회 시 반환되는 원본값(reveal + audit). */
+  value?: string;
 }
 
 /**

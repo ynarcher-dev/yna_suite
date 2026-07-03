@@ -185,17 +185,18 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 로컬 입력 UX 원칙 구현**
     *   자동완성 우선(`MasterSearchPicker`가 입력값으로 검색 API 디바운스 호출) → 기존 마스터 선택 시 상세로 이동(중복 방지/FK 연계 데모) → 없으면 즉시 임시 생성(pending·중복후보 자동 큐잉). 스타트업/전문가/협력사 목록의 "신규 등록"이 이 공용 dialog + API 로 통일.
 
-### [ ] Phase 1.9 식별자 · 별칭 · 필드 이력
+### [x] Phase 1.9 식별자 · 별칭 · 필드 이력
 *(근거: yna_suite_master_data_policy.md §3~6·12, yna_suite_api_contracts.md §10~11)*
+> 진행: 식별자 primary 전환(같은 유형 기존 대표 해제 트랜잭션)·검증상태(verified_status) 변경·삭제, 별칭 삭제, 필드이력 출처(source_domain) 기록, 민감 식별자 원본 조회 시 audit(`view_sensitive`). 공통 API §10~11 HTTP 라우트 5종(identifier POST/PATCH/DELETE, alias POST/DELETE) + 엔티티 공용 서버 액션 + 공용 행 액션 UI(reveal/대표지정/검증변경/삭제). DB 컬럼(verified_status·source_domain)은 1.3 마이그레이션에 이미 존재해 스키마 변경 없음. typecheck 10/10·lint 10/10·test(permissions29/master-data8/utils12)·build 2/2 + hub smoke(API 201/200·validation400·not_found404·invalid400·dup409·상세렌더). (2026-07-03)
 
-*   **[ ] 식별자 관리**
-    *   `master_identifiers` 저장(business_number/founder_phone/founder_email/website_domain 등). 원본값 보존 + normalized_value 생성, primary 전환은 트랜잭션 처리.
-*   **[ ] 별칭 관리**
-    *   `master_aliases` 저장(previous_name/short_name/brand_name/team_name 등), 대표값에서 밀려난 이름 보존, 검색에 normalized 사용.
-*   **[ ] 필드 변경 이력**
-    *   `master_field_history`에 대표값 변경 전/후·출처·사유 기록.
-*   **[ ] 개인정보 마스킹**
-    *   목록에서 전화/이메일 마스킹, 원본 조회는 권한자 + audit log.
+*   **[x] 식별자 관리**
+    *   `master_identifiers` 저장(business_number/founder_phone/founder_email/website_domain 등). 원본값 보존 + normalized_value 생성, **primary 전환은 트랜잭션 처리**(같은 (마스터,유형) 기존 대표 해제). 검증상태(verified/rejected/unverified) PATCH + 삭제 DELETE.
+*   **[x] 별칭 관리**
+    *   `master_aliases` 저장(previous_name/short_name/brand_name/team_name 등), 대표값에서 밀려난 이름 보존, 검색에 normalized 사용. 삭제 DELETE.
+*   **[x] 필드 변경 이력**
+    *   `master_field_history`에 대표값 변경 전/후·**출처(source_domain)**·사유 기록. 상세 이력 테이블에 출처 열 노출.
+*   **[x] 개인정보 마스킹**
+    *   목록에서 전화/이메일 마스킹, **원본 조회는 권한자 + audit log**(상세 식별자 "원본 보기" → `view_sensitive` audit).
 
 ### [ ] Phase 1.10 중복 후보 · 수동 병합
 *(근거: yna_suite_master_data_policy.md §10·13~15, yna_suite_api_contracts.md §12~15)*

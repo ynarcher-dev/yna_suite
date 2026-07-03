@@ -42,7 +42,7 @@ import type {
  * - Supabase 설정(운영/스테이징): hub 스키마 조회로 대체(Docker/staging 에서 연결).
  */
 
-function ensureFallback(): void {
+export function ensureFallback(): void {
   if (isSupabaseConfigured) {
     throw new Error(
       "Hub 마스터 조회의 Supabase 연동은 Docker/staging 환경에서 연결 예정입니다(4_memo 이슈21).",

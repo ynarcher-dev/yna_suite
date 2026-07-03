@@ -173,6 +173,7 @@ function insertIdentifiers(
       identifierValue: value,
       normalizedValue: normalized,
       isPrimary: false,
+      verifiedStatus: "unverified",
       sourceDomain: "hub",
       createdAt: new Date().toISOString(),
     };

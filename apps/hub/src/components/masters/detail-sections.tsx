@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { Button, EmptyState, MasterCodeBadge, StatusBadge, Table, TBody, TD, TH, THead, TR } from "@yna/ui";
-import { maskBusinessNumber, maskEmail, maskPhone } from "@yna/utils";
 import { candidateStrength } from "@yna/master-data";
-import {
-  aliasLabel,
-  auditActionLabel,
-  fmtDateTime,
-  identifierLabel,
-} from "@/lib/hub-data/display";
+import { auditActionLabel, fmtDateTime } from "@/lib/hub-data/display";
+import { AliasRow, IdentifierRow } from "@/components/masters/subrecord-actions";
 import type {
   AuditEntry,
   FieldHistoryEntry,
@@ -29,13 +24,6 @@ function SectionHead({ title, action }: { title: string; action?: React.ReactNod
       {action}
     </div>
   );
-}
-
-function maskIdentifier(type: string, value: string): string {
-  if (type === "business_number" || type === "corporation_number") return maskBusinessNumber(value);
-  if (type === "founder_phone" || type === "phone") return maskPhone(value);
-  if (type === "founder_email" || type === "email") return maskEmail(value);
-  return value;
 }
 
 export function IdentifiersSection({
@@ -66,11 +54,7 @@ export function IdentifiersSection({
       ) : (
         <ul className="flex flex-col gap-1.5">
           {identifiers.map((i) => (
-            <li key={i.id} className="flex items-center gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm">
-              <span className="w-28 shrink-0 text-gray-500">{identifierLabel(i.identifierType)}</span>
-              <span className="font-medium text-gray-800">{maskIdentifier(i.identifierType, i.identifierValue)}</span>
-              {i.isPrimary && <StatusBadge tone="info">대표</StatusBadge>}
-            </li>
+            <IdentifierRow key={i.id} identifier={i} canWrite={canWrite} />
           ))}
         </ul>
       )}
@@ -104,10 +88,7 @@ export function AliasesSection({
       ) : (
         <ul className="flex flex-wrap gap-2">
           {aliases.map((a) => (
-            <li key={a.id} className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-sm">
-              <span className="text-xs text-gray-400">{aliasLabel(a.aliasType)}</span>
-              <span className="text-gray-800">{a.aliasValue}</span>
-            </li>
+            <AliasRow key={a.id} alias={a} canWrite={canWrite} />
           ))}
         </ul>
       )}
@@ -174,6 +155,7 @@ export function FieldHistorySection({ history }: { history: FieldHistoryEntry[] 
               <TH>필드</TH>
               <TH>이전</TH>
               <TH>이후</TH>
+              <TH>출처</TH>
               <TH>사유</TH>
             </TR>
           </THead>
@@ -184,6 +166,7 @@ export function FieldHistorySection({ history }: { history: FieldHistoryEntry[] 
                 <TD className="text-gray-800">{h.fieldName}</TD>
                 <TD className="text-gray-500">{h.oldValue ?? "—"}</TD>
                 <TD className="text-gray-800">{h.newValue ?? "—"}</TD>
+                <TD className="text-gray-500">{h.sourceDomain ?? "—"}</TD>
                 <TD className="text-gray-500">{h.changeReason ?? "—"}</TD>
               </TR>
             ))}

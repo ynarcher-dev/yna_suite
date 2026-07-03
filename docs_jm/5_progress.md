@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.9 식별자 · 별칭 · 필드 이력
+*   **완료**:
+    *   **데이터 모델 보강**(`hub-data/types.ts`): `MasterIdentifier.verifiedStatus`(unverified/verified/rejected), `FieldHistoryEntry.sourceDomain`, `ActionResult.value`(reveal 반환) 추가. DB 컬럼(`master_identifiers.verified_status`·`master_field_history.source_domain`·`master_aliases.source_domain`)은 1.3 마이그레이션(`171003`)에 이미 존재 → 스키마 변경 없음.
+    *   **mock 스토어 mutation**(`mock-store.ts`): `setIdentifierPrimary`(같은 (entityId,identifierType) 기존 primary 해제 후 대상만 설정 — 트랜잭션), `setIdentifierVerification`, `removeIdentifier`, `removeAlias`, `revealIdentifier`(audit 후 원본 반환) + 역참조 lookup(`findIdentifier`/`findAlias`/`resolveEntityType`/`identifiersOf`/`aliasesOf`). `addIdentifierRow`/`addAliasRow`는 생성 id 반환(+`verifiedStatus:"unverified"`). `pushFieldHistory`에 sourceDomain(기본 hub). 미사용 스타트업 래퍼 3개(mockAddIdentifier/mockAddAlias/mockSetStartupStatus) 제거.
+    *   **엔티티 공용 서버 액션**(`action-helpers.ts` runner + `actions-identifiers.ts`): `setIdentifierPrimaryAction`/`verifyIdentifierAction`/`removeIdentifierAction`/`removeAliasAction`/`revealIdentifierAction`. id 로 소유 마스터 역참조 → 사유 필수·merged 제한 가드 → mutation → revalidate. 스타트업/전문가/협력사 상세가 동일 액션 공유(엔티티별 add 액션은 1.7 그대로 유지).
+    *   **공통 API §10~11 HTTP 라우트**: `POST /api/hub/masters/{entity_type}/{id}/identifiers`(201), `PATCH /api/hub/identifiers/{id}`(대표/검증), `DELETE /api/hub/identifiers/{id}`, `POST /api/hub/masters/{entity_type}/{id}/aliases`(201), `DELETE /api/hub/aliases/{id}`. `service-subrecords.ts`(ensureFallback seam + ApiError 코드), `api-map.ts` body 매퍼·snake_case 투영.
+    *   **UI**(`components/masters/`): `subrecord-actions.tsx`(공용 `IdentifierRow`/`AliasRow` — 마스킹+원본보기 reveal, 대표지정/검증변경/삭제 사유 dialog, 별칭 삭제), `detail-sections.tsx`가 행 컴포넌트 사용 + 필드이력에 출처 열 추가. 3개 상세 뷰는 기존 `IdentifiersSection`/`AliasesSection` 시그니처 그대로라 무변경.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 permissions 29·master-data 8·utils 12 pass, `pnpm build`(hub/dev) 2/2(신규 API 라우트 5개 ƒ dynamic 등록). **hub 프로덕션 smoke**: 식별자 POST 201(primary·verified_status unverified)·PATCH verified 200·PATCH primary 200·DELETE 200, 별칭 POST 201·DELETE 200, validation 400(값 누락)·not_found 404(없는 id)·invalid entity 400(manager)·dup 409(중복 사업자번호)·PATCH no-op 400, 상세 `/startups/st-1` 200(검증됨/미검증 배지·출처 열·원본보기·검증변경 버튼·`123-**` 마스킹·history `work` 출처 렌더).
+    *   **미검증(이슈26)**: Docker 미설치로 실제 hub RPC(identifier/alias CRUD)·RLS 는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류).
+*   **다음 작업**: **Phase 1.10 중복 후보 · 수동 병합** — 중복 후보 목록/상세 좌우 비교, 병합 미리보기 API(`.../preview`), 수동 병합 승인/반려/무시/보류, 2단계 비동기 병합 반영(source 상태만 동기 커밋 + 백그라운드 FK). (1.8 에서 임시 생성 시 후보 자동생성·1.6~1.9 에서 상세의 후보 표시는 구현됨 → 1.10 은 병합 승인 트랜잭션·resolved view/helper 를 채운다.)
+*   **주의점**:
+    *   식별자/별칭 관리에는 **두 진입점**이 있다 — (a) Hub 상세 UI 는 엔티티 공용 **서버 액션**(사유 dialog·revalidate), (b) `/api/hub/...` **HTTP 계약**(§10~11, 크로스앱 재사용·smoke). 둘 다 같은 `mock-store` mutation 으로 수렴한다. Docker/staging 연결 시 mutation 만 hub RPC/쿼리로 교체하면 두 경로가 함께 전환된다(이슈21·25 seam 유지).
+    *   **primary 는 (마스터, 식별자유형) 단위**로 단일 — 대표 전화 1개·대표 사업자번호 1개가 공존 가능(정책 §5 "primary 하나만 지정"의 유형별 해석). 
+    *   **마스킹은 UX**: 상세 식별자 원본값은 이미 RSC props 에 담겨 클라이언트로 전달되며(목록 마스킹 방침과 동일, 이슈23), "원본 보기"는 audit(`view_sensitive`)를 남기고 이미 보유한 원본을 노출한다. 최종 원본 접근 제어는 실데이터 연결 시 RLS + 서버 마스킹으로 강제.
+    *   포트 3000 stale 서버 남으면 smoke 전 종료(이전 handoff 동일).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.8 마스터 검색/자동완성 API + 임시 마스터 생성
 *   **완료**:
     *   **중복후보 점수(순수, `@yna/master-data`)**: `merge/candidate.ts`(`scoreDuplicateCandidate(a,b)`→score/reasons/conflict, `shouldProposeCandidate`). §13 정책 반영 — 사업자/법인번호 일치=강한 식별자(96↑), 서로 다르면 **충돌로 후보 제외**(자동 병합 금지), 공식 번호 없으면 이름(정확 45/유사 25)·대표자(25)·전화(30)·이메일(30)·도메인(20) 합산 상한 94. 단위 테스트 6개(master-data 총 8 pass). reasons vocabulary 는 seed·상세화면과 동일(`business_number_match`/`normalized_name_exact`/`representative_name_match`/…).

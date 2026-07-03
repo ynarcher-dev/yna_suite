@@ -50,17 +50,17 @@ export interface MockState {
 
 export function seedState(): MockState {
   const identifiers: MockState["identifiers"] = [
-    ident("id-1", "st-1", "business_number", "123-45-67890", "1234567890", true),
-    ident("id-2", "st-1", "founder_phone", "010-1234-5678", "01012345678", false),
-    ident("id-3", "st-1", "website_domain", "alpha.example", "alpha.example", false),
-    ident("id-4", "st-2", "business_number", "223-34-45566", "2233445566", true),
-    ident("id-5", "st-temp", "founder_phone", "010-1234-5678", "01012345678", true),
-    ident("id-6", "ex-1", "email", "hong.mentor@expert.example", normalizeEmail("hong.mentor@expert.example"), true),
-    ident("id-7", "ex-1", "phone", "010-2345-0001", normalizePhone("010-2345-0001"), false),
-    ident("id-8", "ex-2", "email", "kim.pro@expert.example", normalizeEmail("kim.pro@expert.example"), true),
-    ident("id-9", "pt-1", "business_number", "301-12-00123", "3011200123", true),
-    ident("id-10", "pt-2", "business_number", "107-88-12345", "1078812345", true),
-    ident("id-11", "pt-temp", "business_number", "107-88-12345", "1078812345", true),
+    ident("id-1", "st-1", "business_number", "123-45-67890", "1234567890", true, "verified"),
+    ident("id-2", "st-1", "founder_phone", "010-1234-5678", "01012345678", true, "verified"),
+    ident("id-3", "st-1", "website_domain", "alpha.example", "alpha.example", false, "unverified"),
+    ident("id-4", "st-2", "business_number", "223-34-45566", "2233445566", true, "verified"),
+    ident("id-5", "st-temp", "founder_phone", "010-1234-5678", "01012345678", true, "unverified"),
+    ident("id-6", "ex-1", "email", "hong.mentor@expert.example", normalizeEmail("hong.mentor@expert.example"), true, "verified"),
+    ident("id-7", "ex-1", "phone", "010-2345-0001", normalizePhone("010-2345-0001"), false, "unverified"),
+    ident("id-8", "ex-2", "email", "kim.pro@expert.example", normalizeEmail("kim.pro@expert.example"), true, "unverified"),
+    ident("id-9", "pt-1", "business_number", "301-12-00123", "3011200123", true, "verified"),
+    ident("id-10", "pt-2", "business_number", "107-88-12345", "1078812345", true, "verified"),
+    ident("id-11", "pt-temp", "business_number", "107-88-12345", "1078812345", true, "unverified"),
   ];
 
   const aliases: MockState["aliases"] = [
@@ -73,10 +73,10 @@ export function seedState(): MockState {
   ];
 
   const fieldHistory: MockState["fieldHistory"] = [
-    history("fh-1", "st-1", "name", "예비창업팀 알파", "알파테크", "법인 설립에 따른 사명 확정", "2026-04-01T05:00:00Z"),
-    history("fh-2", "st-1", "legalName", null, "주식회사 알파테크", "법인 설립 정보 반영", "2026-04-01T05:00:00Z"),
-    history("fh-3", "ex-1", "organization", "프리랜서", "알파벤처스", "소속 변경 확인", "2026-06-10T05:00:00Z"),
-    history("fh-4", "pt-2", "name", "스마트 법률사무소", "스마트법무법인", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z"),
+    history("fh-1", "st-1", "name", "예비창업팀 알파", "알파테크", "hub", "법인 설립에 따른 사명 확정", "2026-04-01T05:00:00Z"),
+    history("fh-2", "st-1", "legalName", null, "주식회사 알파테크", "hub", "법인 설립 정보 반영", "2026-04-01T05:00:00Z"),
+    history("fh-3", "ex-1", "organization", "프리랜서", "알파벤처스", "work", "소속 변경 확인", "2026-06-10T05:00:00Z"),
+    history("fh-4", "pt-2", "name", "스마트 법률사무소", "스마트법무법인", "hub", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z"),
   ];
 
   const mergeCandidates: MergeCandidateRow[] = [
@@ -161,6 +161,7 @@ function ident(
   identifierValue: string,
   normalizedValue: string,
   isPrimary: boolean,
+  verifiedStatus: MasterIdentifier["verifiedStatus"],
 ): MasterIdentifier & { entityId: string } {
   return {
     id,
@@ -169,6 +170,7 @@ function ident(
     identifierValue,
     normalizedValue,
     isPrimary,
+    verifiedStatus,
     sourceDomain: "hub",
     createdAt: "2026-04-01T05:00:00Z",
   };
@@ -197,10 +199,11 @@ function history(
   fieldName: string,
   oldValue: string | null,
   newValue: string | null,
+  sourceDomain: string,
   changeReason: string,
   changedAt: string,
 ): FieldHistoryEntry & { entityId: string } {
-  return { id, entityId, fieldName, oldValue, newValue, changeReason, changedBy: "관리자(개발)", changedAt };
+  return { id, entityId, fieldName, oldValue, newValue, sourceDomain, changeReason, changedBy: "관리자(개발)", changedAt };
 }
 
 function candidate(

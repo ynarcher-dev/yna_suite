@@ -1,6 +1,7 @@
 import type { EntityType } from "@yna/core";
 import type { StatusTone } from "@yna/ui";
-import type { MasterStatus, VerificationStatus } from "./types";
+import { maskBusinessNumber, maskEmail, maskPhone } from "@yna/utils";
+import type { IdentifierVerifiedStatus, MasterStatus, VerificationStatus } from "./types";
 
 /**
  * Hub 화면 표시용 라벨/포맷 헬퍼(순수). 서버·클라이언트 공용.
@@ -18,6 +19,26 @@ const VERIFICATION_META: Record<VerificationStatus, { label: string; tone: Statu
 export function verificationMeta(v: VerificationStatus) {
   return VERIFICATION_META[v];
 }
+
+const IDENTIFIER_VERIFIED_META: Record<
+  IdentifierVerifiedStatus,
+  { label: string; tone: StatusTone }
+> = {
+  verified: { label: "검증됨", tone: "success" },
+  unverified: { label: "미검증", tone: "neutral" },
+  rejected: { label: "반려", tone: "danger" },
+};
+
+export function identifierVerifiedMeta(v: IdentifierVerifiedStatus) {
+  return IDENTIFIER_VERIFIED_META[v];
+}
+
+/** PATCH 식별자 검증상태 옵션(검증/반려/미검증). */
+export const IDENTIFIER_VERIFIED_STATUSES: IdentifierVerifiedStatus[] = [
+  "verified",
+  "rejected",
+  "unverified",
+];
 
 const STATUS_META: Record<MasterStatus, { label: string; tone: StatusTone }> = {
   active: { label: "활성", tone: "success" },
@@ -110,7 +131,12 @@ const ACTION_LABEL: Record<string, string> = {
   create_temporary: "임시 생성",
   update: "정보 변경",
   add_identifier: "식별자 추가",
+  set_primary: "대표 식별자 지정",
+  verify_identifier: "식별자 검증 변경",
+  remove_identifier: "식별자 삭제",
   add_alias: "별칭 추가",
+  remove_alias: "별칭 삭제",
+  view_sensitive: "민감정보 원본 조회",
   set_status: "상태 변경",
   merge: "병합",
 };
@@ -129,6 +155,14 @@ export function isSensitiveIdentifier(type: string): boolean {
     type === "phone" ||
     type === "email"
   );
+}
+
+/** 식별자 유형별 마스킹 표시값(민감 식별자만). 원본 조회는 audit + reveal 로 처리한다. */
+export function maskIdentifierValue(type: string, value: string): string {
+  if (type === "business_number" || type === "corporation_number") return maskBusinessNumber(value);
+  if (type === "founder_phone" || type === "phone") return maskPhone(value);
+  if (type === "founder_email" || type === "email") return maskEmail(value);
+  return value;
 }
 
 /** ISO 문자열을 YYYY-MM-DD 로. */
