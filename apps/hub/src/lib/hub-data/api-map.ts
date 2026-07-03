@@ -1,6 +1,13 @@
 import type { MasterEntity } from "./mock-store";
 import type {
   IdentifierVerifiedStatus,
+  ImportBatch,
+  ImportBatchDetail,
+  ImportDryRunReport,
+  ImportRow,
+  ImportRunInput,
+  ImportSourceType,
+  ImportSummary,
   MasterAlias,
   MasterIdentifier,
   MasterSearchApiItem,
@@ -257,5 +264,102 @@ export function mapTemporaryBody(body: Record<string, unknown>): TemporaryMaster
     sourceRecordId: str(body.source_record_id),
     identifiers,
     aliases,
+  };
+}
+
+// ---- import(마이그레이션 도구) mapping. (migration_strategy, functional_spec §14, data_model §11) ----
+
+const IMPORT_SOURCE_TYPES: readonly ImportSourceType[] = ["db", "csv", "xlsx", "google_sheet", "manual"];
+
+function importSourceType(v: unknown): ImportSourceType {
+  return typeof v === "string" && (IMPORT_SOURCE_TYPES as readonly string[]).includes(v)
+    ? (v as ImportSourceType)
+    : "manual";
+}
+
+/** import 실행/미리보기 요청 body(snake_case) → 내부 입력. rows 는 원본 그대로 보존한다. */
+export function mapImportRunBody(body: Record<string, unknown>): ImportRunInput {
+  const rows = Array.isArray(body.rows)
+    ? (body.rows as unknown[]).filter(
+        (r): r is Record<string, unknown> => Boolean(r) && typeof r === "object" && !Array.isArray(r),
+      )
+    : [];
+  return {
+    sourceType: importSourceType(body.source_type),
+    sourceName: str(body.source_name) ?? "manual",
+    rows,
+  };
+}
+
+export function importSummaryApi(s: ImportSummary) {
+  return {
+    new_masters: s.newMasters,
+    linked_masters: s.linkedMasters,
+    candidate_masters: s.candidateMasters,
+    merge_candidates: s.mergeCandidates,
+    failed_rows: s.failedRows,
+    needs_review: s.needsReview,
+  };
+}
+
+/** import batch 를 API(snake_case) 형태로 투영한다. (functional_spec §14 필수 컬럼) */
+export function toImportBatchApi(b: ImportBatch) {
+  return {
+    id: b.id,
+    source_type: b.sourceType,
+    source_name: b.sourceName,
+    entity_type: b.entityType,
+    is_dry_run: b.isDryRun,
+    status: b.status,
+    total_rows: b.totalRows,
+    processed_rows: b.processedRows,
+    failed_rows: b.failedRows,
+    summary: importSummaryApi(b.summary),
+    started_by: b.startedBy,
+    started_at: b.startedAt,
+    finished_at: b.finishedAt,
+    archived_at: b.archivedAt,
+  };
+}
+
+function importRowApi(r: ImportRow) {
+  return {
+    id: r.id,
+    source_row_number: r.sourceRowNumber,
+    raw_payload: r.rawPayload,
+    mapped_payload: r.mappedPayload,
+    normalized_payload: r.normalizedPayload,
+    import_status: r.importStatus,
+    decision_kind: r.decisionKind,
+    error_message: r.errorMessage,
+    hub_entity_id: r.hubEntityId,
+    hub_entity_label: r.hubEntityLabel,
+    created_at: r.createdAt,
+    processed_at: r.processedAt,
+  };
+}
+
+/** import batch 상세를 API(snake_case) 형태로 투영한다. */
+export function toImportBatchDetailApi(d: ImportBatchDetail) {
+  return {
+    batch: toImportBatchApi(d.batch),
+    rows: d.rows.map(importRowApi),
+    failure_reasons: d.failureReasons.map((f) => ({ message: f.message, count: f.count })),
+  };
+}
+
+/** dry-run 리포트를 API(snake_case) 형태로 투영한다. (migration_strategy §16) */
+export function toImportDryRunApi(report: ImportDryRunReport) {
+  return {
+    total_rows: report.totalRows,
+    summary: importSummaryApi(report.summary),
+    rows: report.rows.map((r) => ({
+      source_row_number: r.sourceRowNumber,
+      display_name: r.displayName,
+      decision_kind: r.decisionKind,
+      target_label: r.targetLabel,
+      score: r.score,
+      error_message: r.errorMessage,
+    })),
   };
 }

@@ -3,6 +3,10 @@ import type { StatusTone } from "@yna/ui";
 import { maskBusinessNumber, maskEmail, maskPhone } from "@yna/utils";
 import type {
   IdentifierVerifiedStatus,
+  ImportBatchStatus,
+  ImportDecisionKind,
+  ImportRowStatus,
+  ImportSourceType,
   MasterStatus,
   MergeCandidateStatus,
   MergeSyncStatus,
@@ -148,6 +152,8 @@ const ACTION_LABEL: Record<string, string> = {
   reject_merge: "병합 반려",
   ignore_merge: "병합 무시",
   hold_merge: "병합 보류",
+  import: "데이터 이관",
+  import_rollback: "이관 되돌리기",
 };
 
 const MERGE_STATUS_META: Record<MergeCandidateStatus, { label: string; tone: StatusTone }> = {
@@ -246,4 +252,53 @@ export function fmtDateTime(iso: string | null): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)}`;
+}
+
+// ---- import(마이그레이션 도구) 라벨. (functional_spec §14, migration_strategy) ----
+
+const IMPORT_BATCH_STATUS_META: Record<ImportBatchStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "대기", tone: "neutral" },
+  running: { label: "진행중", tone: "info" },
+  completed: { label: "완료", tone: "success" },
+  partial: { label: "부분성공", tone: "warning" },
+  failed: { label: "실패", tone: "danger" },
+  archived: { label: "되돌림", tone: "neutral" },
+};
+
+export function importBatchStatusMeta(s: ImportBatchStatus) {
+  return IMPORT_BATCH_STATUS_META[s] ?? { label: s, tone: "neutral" as StatusTone };
+}
+
+const IMPORT_ROW_STATUS_META: Record<ImportRowStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "대기", tone: "neutral" },
+  processed: { label: "처리됨", tone: "success" },
+  failed: { label: "실패", tone: "danger" },
+  skipped: { label: "제외", tone: "neutral" },
+};
+
+export function importRowStatusMeta(s: ImportRowStatus) {
+  return IMPORT_ROW_STATUS_META[s] ?? { label: s, tone: "neutral" as StatusTone };
+}
+
+const IMPORT_DECISION_META: Record<ImportDecisionKind, { label: string; tone: StatusTone }> = {
+  connect: { label: "기존 연결", tone: "info" },
+  new_master: { label: "신규 생성", tone: "success" },
+  candidate: { label: "후보 검토", tone: "warning" },
+  failed: { label: "실패", tone: "danger" },
+};
+
+export function importDecisionMeta(k: ImportDecisionKind) {
+  return IMPORT_DECISION_META[k] ?? { label: k, tone: "neutral" as StatusTone };
+}
+
+const IMPORT_SOURCE_LABEL: Record<ImportSourceType, string> = {
+  db: "기존 DB",
+  csv: "CSV",
+  xlsx: "엑셀",
+  google_sheet: "구글시트",
+  manual: "수동 입력",
+};
+
+export function importSourceLabel(t: ImportSourceType): string {
+  return IMPORT_SOURCE_LABEL[t] ?? t;
 }

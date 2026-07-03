@@ -981,16 +981,20 @@ CREATE TABLE staging.import_batches (
     source_type VARCHAR(50) NOT NULL,                         -- db/csv/xlsx/google_sheet/manual
     source_name TEXT NOT NULL,                                -- 원본 이름
     entity_type VARCHAR(50) NOT NULL,                         -- startup/expert/partner/application 등
+    is_dry_run BOOLEAN NOT NULL DEFAULT FALSE,                 -- dry-run(운영 미반영) 여부
     total_rows INTEGER DEFAULT 0,                              -- 전체 row 수
     processed_rows INTEGER DEFAULT 0,                          -- 처리 완료 row 수
     failed_rows INTEGER DEFAULT 0,                             -- 실패 row 수
-    status VARCHAR(50) DEFAULT 'pending',                     -- pending/running/completed/failed/partial
+    status VARCHAR(50) DEFAULT 'pending',                     -- pending/running/completed/failed/partial/archived
     started_by UUID REFERENCES auth.users(id),                 -- 실행자
     started_at TIMESTAMPTZ DEFAULT now(),                      -- 시작 시각
     finished_at TIMESTAMPTZ NULL,                              -- 종료 시각
-    summary JSONB DEFAULT '{}'::jsonb                          -- 결과 요약
+    archived_at TIMESTAMPTZ NULL,                              -- rollback(비활성화) 시각
+    summary JSONB DEFAULT '{}'::jsonb                          -- 결과 요약(신규/연결/후보/실패 수)
 );
 ```
+
+> Phase 1.12 에서 `is_dry_run`(운영 반영 전 dry-run 필수), `archived_at`(batch 단위 rollback = status='archived' 비활성화)을 추가했다. status 에 `archived` 를 포함한다.
 
 ### 11.2 `staging.startup_import_rows`
 
@@ -1006,12 +1010,15 @@ CREATE TABLE staging.startup_import_rows (
     mapped_payload JSONB NULL,                                 -- 표준 컬럼으로 매핑한 값
     normalized_payload JSONB NULL,                             -- 검색/비교용 정규화 값
     import_status VARCHAR(50) DEFAULT 'pending',               -- pending/processed/failed/skipped
+    decision_kind VARCHAR(50) NULL,                            -- connect/new_master/candidate/failed(판정 결과)
     error_message TEXT NULL,                                   -- 실패 사유
     hub_entity_id UUID NULL REFERENCES hub.startups(id),        -- 생성/연결된 hub.startups.id
     created_at TIMESTAMPTZ DEFAULT now(),                      -- 생성 시각
     processed_at TIMESTAMPTZ NULL                              -- 처리 시각
 );
 ```
+
+> Phase 1.12 에서 `decision_kind`(연결/신규/후보/실패 판정)를 추가했다. 판정 기준은 migration_strategy §9(강한 식별자 일치→connect, 공식 번호 없이 단서 일치→candidate, 일치 없음→new_master, 필수값 누락→failed).
 
 주의:
 

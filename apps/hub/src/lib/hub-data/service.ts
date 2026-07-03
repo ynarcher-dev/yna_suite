@@ -20,6 +20,13 @@ import {
 } from "./mock-masters";
 import { mockCreateTemporaryMaster } from "./mock-temporary";
 import {
+  mockDryRunImport,
+  mockGetImportBatchDetail,
+  mockListImportBatches,
+  mockRollbackImport,
+  mockRunImport,
+} from "./mock-import";
+import {
   mockApproveMerge,
   mockGetMergeCandidateDetail,
   mockHoldMerge,
@@ -34,6 +41,11 @@ import type {
   DashboardCounts,
   ExpertDetail,
   ExpertMaster,
+  ImportBatch,
+  ImportBatchDetail,
+  ImportDryRunReport,
+  ImportRunInput,
+  ImportRunResult,
   MasterSearchApiItem,
   MasterSearchResult,
   MergeApproveInput,
@@ -215,4 +227,33 @@ export async function holdMerge(
 export async function listAuditLogs(filter: AuditLogFilter = {}): Promise<AuditLogListItem[]> {
   ensureFallback();
   return mockListAuditLogs(filter);
+}
+
+/**
+ * 기존 스타트업 DB 이관 도구. (근거: migration_strategy, functional_spec §14, data_model §11)
+ * dry-run(운영 미반영) → run(실제 이관) → rollback(batch 단위 비활성화). staging 적재는 Docker 연결 시.
+ */
+export async function listImportBatches(): Promise<ImportBatch[]> {
+  ensureFallback();
+  return mockListImportBatches();
+}
+
+export async function getImportBatchDetail(id: string): Promise<ImportBatchDetail | null> {
+  ensureFallback();
+  return mockGetImportBatchDetail(id);
+}
+
+export async function dryRunImport(input: ImportRunInput): Promise<ImportDryRunReport> {
+  ensureFallback();
+  return mockDryRunImport(input);
+}
+
+export async function runImport(input: ImportRunInput, actorName: string): Promise<ImportRunResult> {
+  ensureFallback();
+  return mockRunImport(input, actorName);
+}
+
+export async function rollbackImport(id: string, actorName: string): Promise<ImportRunResult> {
+  ensureFallback();
+  return mockRollbackImport(id, actorName);
 }

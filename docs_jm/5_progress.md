@@ -30,6 +30,25 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.12 기존 스타트업 DB 마이그레이션 도구
+*   **완료**:
+    *   **staging 스키마**(마이그레이션 `20260703210001_create_staging_import_tables.sql`): `staging.import_batches`(source_type·source_name·entity_type·is_dry_run·total/processed/failed·status[+archived]·started_by·started/finished/archived_at·summary jsonb)·`staging.startup_import_rows`(raw/mapped/normalized_payload·import_status·decision_kind·error_message·hub_entity_id FK·processed_at) + 인덱스. RLS: hub read/write(`dev.can_*_domain('hub')`), DELETE 정책 없음(rollback=archived UPDATE), service_role bypass. `docs/yna_suite_data_model.md` §11 DDL 에 `is_dry_run`·`archived_at`·`decision_kind` 동기화.
+    *   **순수 판정**(`@yna/master-data/import`): `mapping.ts`(`STARTUP_IMPORT_MAPPING` 원본 컬럼→표준 필드 동의어 매핑, `applyColumnMapping` — 매핑 안 된 컬럼은 preserved 로 raw_payload 보존), `classify.ts`(`classifyAgainst` — connect≥95·candidate(shouldProposeCandidate)·new_master, 공식 번호 충돌 시 자동 병합 금지→별도 new_master). 기존 `scoreDuplicateCandidate` 재사용(vocabulary 일치). 단위 테스트 7개(master-data 총 24).
+    *   **hub-data 이관 계층**: `import-plan.ts`(순수 `planRow`/`planRows` — 매핑→정규화 비교필드[`comparableOf` 와 동일 normalize]→필수(name/team_name)·형식(사업자 10자리) 검증→판정, 배치 내 가상 후보 누적, `summarizePlans`), `mock-import.ts`(`mockDryRunImport`[무-mutation]·`mockRunImport`[batch/row 생성 + new/candidate 는 `mockCreateTemporaryMaster` 재사용으로 식별자 파생·후보 자동 큐잉·audit, connect 는 링크, summary=실제 mergeCandidateCount]·`mockRollbackImport`[생성 마스터 status=archived + pending 후보 만료, 연결 마스터 보존, batch audit]·목록/상세[실패 사유별 집계]). `import-csv.ts`(첫 줄 헤더 CSV 파서, 따옴표 인식). mock-seed 에 full `ImportBatch`(ib-1 완료·ib-2 부분성공)+row 5건 seed, `appendAuditFor`(import_batch 감사).
+    *   **공통 API §imports**: `GET /api/hub/imports`(목록), `POST /api/hub/imports`(`?dry_run=1`→200 리포트 / 실제→201), `GET /api/hub/imports/{id}`(상세), `POST /api/hub/imports/{id}/rollback`(§15). `api-map.ts` snake_case 투영(batch/detail/dry-run/summary) + `mapImportRunBody`. 서버 액션 `actions-import.ts`(dryRun/run/rollback — guard·actor·revalidate).
+    *   **화면**: `(app)/import-batches`(목록·상태 필터 + 이관 실행 패널[CSV 붙여넣기→dry-run 미리보기→실제 이관, hub write 게이트]) + `[id]`(검증 리포트 카드·실패 사유·row 판정·batch 되돌리기). 컴포넌트 `components/import/`(import-batches-table·import-run-panel·import-summary-cards·import-batch-detail-view). nav 는 기존 `/import-batches` 항목 그대로. display 에 batch/row 상태·판정·source 라벨 + audit action(import/import_rollback) 추가.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 master-data 24(import 7 신규)·permissions 29·utils 12 pass, `pnpm build`(hub/dev) 2/2(신규 `/import-batches` ○·`[id]` ƒ + API 3라우트 ƒ 등록). **SQL 오프라인 파서(pg-query-emscripten)**: staging 마이그레이션 18 statements 통과. **hub 프로덕션 smoke**: `/import-batches`·`/import-batches/ib-2` 200(seed 2건·검증리포트·실패사유 2종·연결 라벨 델타모빌리티 렌더)·없는 batch 404. API — `GET /api/hub/imports` 200(seed 2), `GET .../ib-2` 200(rows 5·failure_reasons 2), `POST ...?dry_run=1` 200(connect[st-1 강한식별자]·candidate[st-1]·new_master·failed 판정), `POST ...`(commit) 201(ib-3 partial·new1/linked1/candidate1/failed1·mergeCandidates2), no-rows 400, rollback 200(archived) → 재rollback 409, 상세 archived·row 전부 skipped.
+    *   **미검증(이슈29)**: Docker 미설치로 staging 실제 적재·`hub_entity_id` FK·RLS·`supabase db reset`/`gen types` 는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류).
+*   **다음 작업**: **Phase 1.13 Work 연결 Mock/Test Flow** — mock `work.programs/applications` 등 최소 구조 + production 비활성 mock API, 핵심 연결 시나리오 자동 검증(work 권한 사용자→프로그램·모듈→Hub 스타트업 검색·연결→유사 신규 임시 마스터→중복 후보→병합 승인→**mock 신청 FK 최종 마스터 이동**→custom activity·회의록·첨부→audit/merge event). Hub 마스터 직접수정 없이 임시 마스터·병합 후보 흐름·resolved view 가 실제 작동하는지 확인. (근거: phase1_scope §11, api_contracts §19, existing_source_alignment)
+*   **주의점**:
+    *   **이관 판정 이중 진입점, 단일 seam**: 화면(서버 액션)·크로스앱(HTTP §imports) 둘 다 service→`mock-import` mutation 으로 수렴. Docker/staging 연결 시 seam 을 staging 적재 + hub RPC(create_temporary_master 등)로 교체하면 두 경로가 함께 전환된다(이슈21·25·26·27 연장).
+    *   **dry-run·run 판정 일관성**: 둘 다 순수 `planRows` 를 쓴다. 단 실제 실행은 `mockCreateTemporaryMaster` 의 실제 `mergeCandidateCount` 로 candidate/new 를 재확정한다(배치 내 앞선 row 가 실 store 에 반영되어 뒤 row 후보가 정확). dry-run 은 가상 후보 누적으로 근사.
+    *   **rollback 은 soft delete**: 이 batch 가 만든 마스터만 archived + pending 후보 만료. **연결(connect)한 기존 마스터는 보존**. 물리 삭제 없음(§15). 감사 로그(`import_rollback`)에 archivedMasters·expiredCandidates 기록.
+    *   **CSV 붙여넣기만 지원**: 실행 패널은 첫 줄 헤더 CSV 파서. 파일 업로드·엑셀 파서는 실데이터 연결 시. 매핑 안 된 컬럼은 서버가 raw_payload(preserved) 로 보존.
+    *   dev 폴백에서 `/import-batches` 목록은 세션 미의존이라 빌드 시 정적 프리렌더 → 런타임 mutation 즉시 미반영(이슈28 방침 동일, smoke 는 seed 렌더 + API envelope 로 검증). `[id]` 상세는 ƒ dynamic. 운영/스테이징은 `(app)` layout 세션 조회로 동적 렌더.
+    *   포트 3000 stale 서버 남으면 smoke 전 종료(이전 handoff 동일).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.11 감사 로그
 *   **완료**:
     *   **스키마 정합**(마이그레이션 `20260703200001_add_request_id_to_audit_logs.sql`): audit 표준(api_contracts §5·security §15)이 `request_id` 를 필수 기록 항목으로 규정하나 1.3 DDL(171005·171006)엔 누락 → `hub.audit_logs`·`dev.permission_audit_logs` 에 `request_id TEXT NULL`(+COMMENT) 추가(스키마만, backfill 없음). `docs/yna_suite_data_model.md` §12·§5.3 DDL 도 함께 갱신.

@@ -223,19 +223,20 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 감사 로그 조회**
     *   기본 조회 화면. 로그는 수정/삭제 불가, 개인정보 원문 payload 저장 금지. (Hub `/audit-logs` 전 엔티티 조회 + Dev `/permission-audit-logs` 보강. append-only — 스토어에 수정/삭제 mutation 없음. before/after 는 민감필드 마스킹 스냅샷으로 원문 미저장.)
 
-### [ ] Phase 1.12 기존 스타트업 DB 마이그레이션 도구
+### [x] Phase 1.12 기존 스타트업 DB 마이그레이션 도구
 *(근거: yna_suite_migration_strategy.md, yna_suite_hub_dev_functional_spec.md §14)*
+> 진행: staging 이관 테이블 마이그레이션(import_batches·startup_import_rows + RLS), 순수 컬럼 매핑·판정(`@yna/master-data` import), hub-data 이관 계층(dry-run/run/rollback·검증 리포트), Import Batch 목록/상세 화면(CSV 붙여넣기→dry-run→실제 이관·rollback), 공통 API §imports 4종. typecheck 10/10·lint 10/10·test(master-data 24[import 7 신규]·permissions 29·utils 12)·build 2/2 + SQL 오프라인 파서(18 stmts)·hub smoke(목록/상세/404·dry-run 200[connect/candidate/new/failed 판정]·run 201[partial·summary]·rollback 200[archived]·재rollback 409·no-rows 400·마스킹). **무-Docker라 staging 적재·hub RPC 는 mock seam(이슈29).** (2026-07-03)
 
-*   **[ ] staging 적재 구조**
-    *   `staging.import_batches`, `staging.startup_import_rows`(raw_payload·mapped·normalized 보존).
-*   **[ ] 컬럼 매핑 + 정규화**
-    *   매핑표 기반 표준 필드 변환, 회사명/대표자/전화/이메일/도메인/사업자번호 정규화. 매핑 안 되는 컬럼은 raw_payload 보존.
-*   **[ ] Import batch 처리 + 리포트**
-    *   기존 마스터 연결 / 신규·임시 마스터 생성 / 중복 후보 / 실패 row 분기, batch별 검증 리포트(신규·연결·후보·실패 수).
-*   **[ ] dry-run 및 rollback**
-    *   운영 반영 전 dry-run 필수, batch 단위 rollback(status=archived / import_batch_id 기준 비활성화).
-*   **[ ] Import Batch 조회 화면**
-    *   Hub에서 성공/실패 row 요약, 실패 사유, 재처리 기준 확인.
+*   **[x] staging 적재 구조**
+    *   `staging.import_batches`, `staging.startup_import_rows`(raw_payload·mapped·normalized 보존). 마이그레이션 `20260703210001` + `is_dry_run`/`archived_at`/`decision_kind` 보강, hub read/write RLS(DELETE 금지), data_model §11 DDL 동기화.
+*   **[x] 컬럼 매핑 + 정규화**
+    *   매핑표(`STARTUP_IMPORT_MAPPING`) 기반 표준 필드 변환(동의어 수용), 회사명/대표자/전화/이메일/도메인/사업자번호 정규화(`@yna/utils`·임시 생성 경로와 동일 규칙). 매핑 안 되는 컬럼은 raw_payload(preserved) 보존. 순수 함수(`@yna/master-data/import`) + 단위 테스트 7개.
+*   **[x] Import batch 처리 + 리포트**
+    *   판정(`classifyAgainst`) 기반 기존 연결(connect)/신규 임시 생성(new_master)/중복 후보(candidate)/실패(failed) 분기, batch별 검증 리포트(신규·연결·후보·중복후보·실패 수). 마스터 생성·후보 큐잉은 임시 마스터 생성 경로 재사용(정규화/식별자/후보 점수 공통 함수).
+*   **[x] dry-run 및 rollback**
+    *   운영 반영 전 dry-run(운영 미반영 판정·리포트) 후 실제 이관. batch 단위 rollback(생성 마스터 status=archived 비활성화 + 얽힌 pending 후보 만료, 연결한 기존 마스터 보존, audit). 물리 삭제 없음(§15).
+*   **[x] Import Batch 조회 화면**
+    *   Hub `/import-batches`(목록·상태 필터·이관 실행 패널) + `/import-batches/[id]`(성공/실패 요약·신규/연결/후보 수·실패 사유별 건수·row 판정·rollback). 실행 패널은 hub write 권한 게이트.
 
 ### [ ] Phase 1.13 Work 연결 Mock/Test Flow
 *(근거: yna_suite_phase1_scope.md §11, yna_suite_api_contracts.md §19, yna_suite_existing_source_alignment.md)*

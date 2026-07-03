@@ -4,11 +4,13 @@ import type {
   AuditEntry,
   ExpertMaster,
   FieldHistoryEntry,
+  ImportBatch,
+  ImportRow,
+  ImportSummary,
   MasterAlias,
   MasterIdentifier,
   MergeEventRow,
   PartnerMaster,
-  RecentImportBatch,
   StartupMaster,
 } from "./types";
 
@@ -39,13 +41,15 @@ export interface MockState {
   fieldHistory: (FieldHistoryEntry & { entityId: string })[];
   mergeCandidates: MergeCandidateRow[];
   mergeEvents: MergeEventRow[];
-  importBatches: RecentImportBatch[];
+  importBatches: ImportBatch[];
+  importRows: (ImportRow & { batchId: string })[];
   audit: AuditEntry[];
   startupSeq: number;
   expertSeq: number;
   partnerSeq: number;
   auditSeq: number;
   mergeSeq: number;
+  importSeq: number;
   idSeq: number;
 }
 
@@ -108,27 +112,47 @@ export function seedState(): MockState {
     },
   ];
 
-  const importBatches: RecentImportBatch[] = [
+  const importBatches: ImportBatch[] = [
     {
       id: "ib-1",
+      sourceType: "xlsx",
       sourceName: "2025_스타트업DB.xlsx",
       entityType: "startup",
+      isDryRun: false,
       status: "completed",
       totalRows: 420,
       processedRows: 420,
       failedRows: 0,
+      summary: summary({ newMasters: 372, linkedMasters: 31, candidateMasters: 17, mergeCandidates: 21 }),
+      startedBy: "관리자(개발)",
       startedAt: "2026-06-15T01:00:00Z",
+      finishedAt: "2026-06-15T01:04:00Z",
+      archivedAt: null,
     },
     {
       id: "ib-2",
-      sourceName: "협력사_명단.csv",
-      entityType: "partner",
+      sourceType: "csv",
+      sourceName: "2025_상반기_추가유입.csv",
+      entityType: "startup",
+      isDryRun: false,
       status: "partial",
       totalRows: 60,
       processedRows: 54,
       failedRows: 6,
+      summary: summary({ newMasters: 41, linkedMasters: 8, candidateMasters: 5, mergeCandidates: 7, failedRows: 6, needsReview: 5 }),
+      startedBy: "관리자(개발)",
       startedAt: "2026-06-28T01:00:00Z",
+      finishedAt: "2026-06-28T01:02:00Z",
+      archivedAt: null,
     },
+  ];
+
+  const importRows: (ImportRow & { batchId: string })[] = [
+    importRow("ir-1", "ib-2", 12, { 회사명: "제타모빌리티", 대표자: "장민수", 사업자번호: "" }, "new_master", "processed", "st-91", "TEMP-ST-2026-0091 · 제타모빌리티"),
+    importRow("ir-2", "ib-2", 27, { 회사명: "알파테크", 대표자: "홍길동", 연락처: "010-1234-5678" }, "candidate", "processed", "st-92", "TEMP-ST-2026-0092 · 알파테크"),
+    importRow("ir-3", "ib-2", 31, { 회사명: "델타", 사업자번호: "445-66-77889" }, "connect", "processed", "st-4", "YNA-ST-2026-0004 · 델타로보틱스"),
+    importRow("ir-4", "ib-2", 44, { 회사명: "", 대표자: "김대표", 연락처: "02-000-0000" }, "failed", "failed", null, null, "회사명(name) 또는 팀명(team_name)이 필요합니다."),
+    importRow("ir-5", "ib-2", 45, { 회사명: "노이즈로보틱스", 사업자번호: "12-345" }, "failed", "failed", null, null, "사업자번호 형식이 올바르지 않습니다(숫자 10자리)."),
   ];
 
   const audit: AuditEntry[] = [
@@ -161,13 +185,56 @@ export function seedState(): MockState {
     mergeCandidates,
     mergeEvents,
     importBatches,
+    importRows,
     audit,
     startupSeq: 92,
     expertSeq: 9,
     partnerSeq: 44,
     auditSeq: 100,
     mergeSeq: 1,
+    importSeq: 2,
     idSeq: 100,
+  };
+}
+
+/** 검증 리포트 요약(누락 필드 0 채움). needsReview 미지정 시 candidateMasters 로 맞춘다. */
+function summary(partial: Partial<ImportSummary>): ImportSummary {
+  const candidateMasters = partial.candidateMasters ?? 0;
+  return {
+    newMasters: partial.newMasters ?? 0,
+    linkedMasters: partial.linkedMasters ?? 0,
+    candidateMasters,
+    mergeCandidates: partial.mergeCandidates ?? 0,
+    failedRows: partial.failedRows ?? 0,
+    needsReview: partial.needsReview ?? candidateMasters,
+  };
+}
+
+function importRow(
+  id: string,
+  batchId: string,
+  sourceRowNumber: number,
+  raw: Record<string, unknown>,
+  decisionKind: ImportRow["decisionKind"],
+  importStatus: ImportRow["importStatus"],
+  hubEntityId: string | null,
+  hubEntityLabel: string | null,
+  errorMessage: string | null = null,
+): ImportRow & { batchId: string } {
+  return {
+    id,
+    batchId,
+    sourceRowNumber,
+    rawPayload: raw,
+    mappedPayload: null,
+    normalizedPayload: null,
+    importStatus,
+    decisionKind,
+    errorMessage,
+    hubEntityId,
+    hubEntityLabel,
+    createdAt: "2026-06-28T01:00:00Z",
+    processedAt: importStatus === "failed" ? null : "2026-06-28T01:01:30Z",
   };
 }
 

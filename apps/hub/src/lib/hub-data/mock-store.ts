@@ -165,6 +165,34 @@ export function appendAudit(
   });
 }
 
+/**
+ * 마스터 엔티티가 아닌 대상(import_batch 등)의 감사 기록.
+ * (import 는 여러 마스터를 생성/연결하므로 batch 단위로 상관관계를 남긴다.)
+ */
+export function appendAuditFor(
+  entityType: string,
+  action: string,
+  entityId: string,
+  actorName: string,
+  reason: string | null,
+  extra?: AuditExtra,
+): void {
+  const s = store();
+  s.audit.push({
+    id: `au-${++s.auditSeq}`,
+    actorName,
+    domainName: "hub",
+    action,
+    entityType,
+    entityId,
+    before: extra?.before ?? null,
+    after: extra?.after ?? null,
+    reason,
+    requestId: extra?.requestId ?? newAuditRequestId(),
+    createdAt: new Date().toISOString(),
+  });
+}
+
 export interface FieldChange {
   fieldName: string;
   oldValue: string | null;
@@ -549,8 +577,22 @@ export function mockRecentMergeEvents() {
   return clone(store().mergeEvents);
 }
 
+/** 대시보드 최근 import batch(운영 반영분만, 최신순). ImportBatch → RecentImportBatch 투영. */
 export function mockRecentImportBatches() {
-  return clone(store().importBatches);
+  return store()
+    .importBatches.filter((b) => !b.isDryRun)
+    .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
+    .slice(0, 5)
+    .map((b) => ({
+      id: b.id,
+      sourceName: b.sourceName,
+      entityType: b.entityType,
+      status: b.status,
+      totalRows: b.totalRows,
+      processedRows: b.processedRows,
+      failedRows: b.failedRows,
+      startedAt: b.startedAt,
+    }));
 }
 
 // ---- startup mutations (thin wrappers over generic) ----

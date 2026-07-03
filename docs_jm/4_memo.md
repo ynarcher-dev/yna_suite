@@ -198,6 +198,20 @@
     *   **정적 프리렌더 특성**: dev 폴백(무-env)에서 `/audit-logs`(및 기존 `/startups`·`/merge-candidates`)는 세션 미의존이라 빌드 시 정적 프리렌더된다 — 런타임 mock mutation 이 화면에 즉시 반영되지 않음(smoke 는 seed 렌더 + 병합 API envelope 로 검증). 운영/스테이징은 `(app)` layout 의 `getSession()` 쿠키 조회로 라우트가 동적 렌더되어 실시간 반영된다. 렌더 전략은 형제 목록 페이지와 일치시켜 별도 force-dynamic 은 두지 않음.
     *   **미검증(이슈15 연장)**: Docker 미설치로 마이그레이션 실제 적용(`supabase db reset`)·`gen types`·RLS 는 미검증. SQL 오프라인 파서(pg-query-emscripten)는 이 기기에 미설치라 문법은 표준 ALTER/COMMENT 4문(육안·괄호균형 확인)으로 두고 db reset 시 최종 검증.
 
+## 1-12. 마이그레이션 도구 메모 (Phase 1.12, 2026-07-03)
+
+### 📌 이슈 29: 기존 스타트업 DB 이관 도구 — 판정 로직 위치·이중 진입점·staging seam·dry-run/rollback (작성일자: 2026-07-03)
+*   **상황**: Phase 1.12 는 기존 스타트업 DB/엑셀을 Hub 마스터로 이관하는 도구를 요구한다. staging 적재(원본·매핑·정규화 보존), 컬럼 매핑·정규화, 기존 연결/신규·임시 생성/중복 후보/실패 분기, batch 검증 리포트, dry-run·rollback, Import Batch 조회 화면(migration_strategy, functional_spec §14). 실제 hub 스키마·staging 적재는 Docker 미설치로 불가(이슈15·21 연장).
+*   **문제**: (1) 매핑·정규화·판정 로직을 어디에 둘지 — 일회성 스크립트에 막 작성 금지, 정규화/식별자/후보 점수는 공통 함수 재사용(migration_strategy §17). (2) 이관 마스터 생성이 기존 임시 마스터 생성(1.8)·중복 후보 자동생성(1.8/1.10)과 로직이 겹친다 — 중복 구현하면 vocabulary 가 어긋난다. (3) dry-run 과 실제 실행이 다른 판정을 내면 검증 의미가 없다. (4) rollback 은 물리 삭제 금지(§15)인데 무엇을 되돌릴지. (5) staging 테이블·hub RPC 를 못 붙인다.
+*   **해결**:
+    *   **순수 판정은 `@yna/master-data/import`**: `applyColumnMapping`(원본 컬럼→표준 필드, 동의어 수용, 매핑 안 된 컬럼은 preserved 로 raw_payload 보존) + `classifyAgainst`(기존 마스터 대비 connect≥95·candidate(shouldProposeCandidate)·new_master, 공식 번호 충돌 시 자동 병합 금지→별도 new_master). 점수/충돌은 기존 `scoreDuplicateCandidate` 재사용 → 임시 생성·병합 후보와 동일 vocabulary. 단위 테스트 7개(master-data 총 24).
+    *   **판정 재사용 = dry-run·run 일관성**: hub-data `import-plan.ts`(순수)가 매핑→정규화 비교필드(임시 생성 경로의 `comparableOf` 와 동일 normalize)→판정을 하고, dry-run 과 run 이 같은 `planRows` 를 쓴다. 배치 내 먼저 생성될 마스터를 가상 후보로 누적해 같은 배치의 중복 row 가 뒤에서 candidate 로 잡힌다.
+    *   **마스터 생성은 임시 생성 경로 재사용**: `mock-import.ts` 의 실제 실행이 new_master/candidate row 에 대해 `mockCreateTemporaryMaster` 를 호출한다 — 식별자 파생·중복 후보 자동 큐잉·audit 가 그대로 재사용되고, decision(candidate vs new)·summary 는 실제 `mergeCandidateCount` 로 확정한다. connect 는 링크만(기존 마스터 미변경).
+    *   **dry-run/rollback**: dry-run 은 스토어를 건드리지 않고 판정·리포트만 계산(§16). rollback 은 이 batch 가 새로 만든 마스터를 `status='archived'` 로 비활성화 + 얽힌 pending 후보 만료(연결한 기존 마스터 보존), batch 단위 audit(§15). 물리 삭제 없음.
+    *   **이중 진입점, 단일 seam**: 화면은 서버 액션(`actions-import.ts`: dryRun/run/rollback), 크로스앱/스크립트 재사용은 HTTP 계약(`/api/hub/imports` GET·POST[?dry_run=1], `/{id}` GET, `/{id}/rollback` POST). 둘 다 service→`mock-import` mutation 으로 수렴(이슈26·27 방침 연장). Docker/staging 연결 시 이 seam 을 staging 적재 + hub RPC 로 교체.
+    *   **staging 스키마**: 마이그레이션 `20260703210001_create_staging_import_tables.sql`(import_batches·startup_import_rows). data_model §11 DDL 대비 `is_dry_run`·`archived_at`·`decision_kind` 를 보강(문서도 동기화). staging 도 개인정보 대상이라 hub read/write RLS + DELETE 금지(rollback=archived UPDATE), service_role 은 batch 처리에서 bypass. SQL 오프라인 파서(pg-query-emscripten, 스크래치패드 설치)로 **18 statements 통과**.
+    *   **미검증(이슈29)**: Docker 미설치로 staging 실제 적재·`hub_entity_id` FK·RLS·`supabase db reset`/`gen types` 는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류). 이관 UI 는 CSV 붙여넣기(첫 줄 헤더)만 지원 — 파일 업로드·엑셀 파서는 실데이터 연결 시.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.
