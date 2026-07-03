@@ -30,6 +30,25 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.4 인증 및 권한 기반
+*   **완료**:
+    *   **권한 모델 확장**(`packages/permissions`): `scope.ts`(scopeTypeOf/scopeIdOf/hasGlobalScope), `templates.ts`(`ROLE_TEMPLATE_MATRIX` 8역할×7도메인 + `ROLE_DEFAULT_SCOPE` + `templatePermissions`). scope/templates 단위 테스트 8개 추가(총 12 pass).
+    *   **RLS helper**(`20260703180001`): `dev.can_read_domain/can_write_domain/get_scope_type/get_scope_id/has_role/is_master/can_merge_master`. auth.jwt() No-Join 파싱 + `expires_at<=now()` 즉시 차단, authenticated/anon EXECUTE + `USAGE ON SCHEMA dev`.
+    *   **Custom Access Token Hook**(`20260703180002`): `dev.custom_access_token_hook`가 `dev.user_permissions`→`app_metadata.permissions`(read/write/scope/expires_at)+`roles` 주입. `supabase_auth_admin` 권한/전용 SELECT 정책, 일반 역할 EXECUTE REVOKE. `config.toml [auth.hook.custom_access_token]` 등록.
+    *   **RLS 정책**(`20260703180003`): hub 마스터(startups/experts/partners/managers)·부속(aliases/identifiers/field_history)·병합(candidates/events)·공통(audit_logs/attachments) + dev(user_permissions/permission_templates/permission_audit_logs) read/write 분리 명시 허용(35 stmts). 물리 삭제 금지(DELETE 정책 없음), audit/권한 INSERT 는 service_role 전용.
+    *   **템플릿 seed**(`20260703180004`): 시스템 기본 8종(master…viewer) `permissions` JSONB(매트릭스와 동일), ON CONFLICT 멱등.
+    *   **앱 인증 배선**(hub·dev 동일): `lib/auth/`(env·server·middleware·session·dev-session·permission-context), `middleware.ts`(세션 갱신+게이트), `login`(server action + form), `auth/callback`·`auth/signout` route, `(app)` 라우트 그룹으로 대시보드 이동+서버 세션 주입. `demo-session.ts` 제거. AppShell 에 `userMenuExtra`(로그아웃 폼) 슬롯 추가.
+    *   **config/env**: `NEXT_PUBLIC_COOKIE_DOMAIN`(서브도메인 SSO) 옵션 + `parsePublicEnvSafe`, `@yna/database` client 에 `cookieDomain` 전달, `.env.example`(root/hub/dev)·config.toml redirect allowlist 갱신.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 12 pass(permissions 12 + master-data 2 등), `pnpm build`(hub/dev) 2/2. SQL 오프라인 파서(pg-query-emscripten) **신규 4파일 59 stmts + 전체 145 stmts ALL_PASS**. hub 프로덕션 실행 후 dev 폴백 세션에서 `GET /` HTTP 200(대시보드/서비스 전환/로그아웃 렌더), `GET /login` 200(폴백 안내).
+    *   **미검증(이슈15·18)**: Docker 미설치로 실제 로그인 왕복, RLS 정책 적용, hook claim 주입, `gen types` 미실행.
+*   **다음 작업**: **Phase 1.5 Y&A Dev — 사용자 및 권한 관리** — 사용자 목록/상세, 초대/생성(Auth 계정+권한 원자적), 도메인별 권한 관리(템플릿+override), 권한 매트릭스, 안전장치+감사 로그, 외부 사용자 연결. (인터랙티브 컴포넌트 Dialog/Select/DataTable 등 Radix/TanStack 승인 후 추가 시점)
+*   **주의점**:
+    *   dev 폴백 세션은 master 권한이라 로컬에서 모든 서비스 스위처가 보임(의도된 배선 검증). 실제 권한 제한은 Supabase 연결+테스트 계정에서 확인.
+    *   페이지 이동으로 stale `.next/types` 발생 시 `rm -rf apps/*/.next && pnpm build`로 라우트 타입 재생성 후 typecheck.
+    *   Docker/staging 환경에서 `supabase db reset`→`supabase gen types typescript --local > packages/database/src/types.ts` 후 RLS 테스트 계정 10종으로 정책 검증 필요.
+    *   `custom_access_token_hook` 은 Supabase 대시보드(Auth Hooks)에서도 활성화해야 원격에 반영됨(config.toml 은 로컬 기준).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.3 Supabase 스키마 및 마이그레이션 기반
 *   **완료**:
     *   **논리 스키마**(`supabase/migrations/20260703171001_create_schemas_and_helpers.sql`): `hub/dev/staging` 우선 + `work/mna/project/fund/management` 스키마 뼈대(테이블 없음). 공통 `dev.set_updated_at()` 트리거 함수 등록.

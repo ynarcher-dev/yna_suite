@@ -14,10 +14,7 @@ const STATS = [
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="대시보드"
-        description="계정, 권한, scope, 감사의 현황을 관리합니다."
-      />
+      <PageHeader title="대시보드" description="계정, 권한, scope, 감사의 현황을 관리합니다." />
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {STATS.map((s) => (
           <div key={s.label} className="rounded-lg border border-gray-200 bg-white p-4">

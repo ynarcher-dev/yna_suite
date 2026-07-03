@@ -160,7 +160,13 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Hub(3000)/Dev(3001) 로컬 콜백. 운영 서브도메인 콜백은 Supabase 대시보드/환경별로 등록한다.
+# (근거: yna_suite_auth_permissions.md §3, ci_cd_release_process — Auth Callback allowlist)
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3001/auth/callback",
+  "https://127.0.0.1:3000",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -281,9 +287,11 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# Phase 1.4: dev.user_permissions → app_metadata.permissions/roles 주입(No-Join RLS 전제).
+# (근거: yna_suite_auth_permissions.md §9, 0_CLAUDE.md §4)
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/dev/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

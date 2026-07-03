@@ -15,6 +15,12 @@ import type { Database } from "./types";
 export interface SupabaseEnv {
   url: string;
   anonKey: string;
+  /**
+   * 서브도메인 세션 공유용 쿠키 도메인(예: .ynarcher.co.kr).
+   * 지정하면 auth 쿠키가 이 도메인으로 발급되어 hub/dev/work 등 서브도메인 간 공유된다.
+   * 로컬(localhost)에서는 비워 둔다(host 기본값).
+   */
+  cookieDomain?: string;
 }
 
 export interface CookieToSet {
@@ -30,11 +36,14 @@ export interface CookieAdapter {
 }
 
 export function createBrowserSupabaseClient(env: SupabaseEnv) {
-  return createBrowserClient<Database>(env.url, env.anonKey);
+  return createBrowserClient<Database>(env.url, env.anonKey, {
+    cookieOptions: env.cookieDomain ? { domain: env.cookieDomain } : undefined,
+  });
 }
 
 export function createServerSupabaseClient(env: SupabaseEnv, cookies: CookieAdapter) {
   return createServerClient<Database>(env.url, env.anonKey, {
+    cookieOptions: env.cookieDomain ? { domain: env.cookieDomain } : undefined,
     cookies: {
       getAll: () => cookies.getAll(),
       setAll: (toSet: CookieToSet[]) => cookies.setAll(toSet),

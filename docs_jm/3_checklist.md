@@ -119,20 +119,21 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] Migration Only 원칙 확립**
     *   운영 DB 직접 수정 금지, 모든 변경은 `supabase/migrations` 파일로만. `YYYYMMDDHHMMSS_*.sql` 명명 규칙 준수. RLS 는 기본 deny 로 활성화(정책은 1.4, 이슈12).
 
-### [ ] Phase 1.4 인증 및 권한 기반
+### [x] Phase 1.4 인증 및 권한 기반
 *(근거: yna_suite_auth_permissions.md, yna_suite_rls_policy_matrix.md)*
+> 진행: Supabase Auth 로그인/로그아웃/콜백·미들웨어 세션 게이트, `packages/permissions` scope/템플릿 helper, Custom Access Token Hook(JWT app_metadata 주입) + RLS helper 7종 + hub/dev 14개 테이블 명시 허용 정책 + 템플릿 seed 8종. 서브도메인 쿠키 도메인 옵션. typecheck/lint/test(12)/build + SQL 오프라인 파서(145 stmts) + dev 폴백 smoke(HTTP 200) 통과. **Docker 미설치로 실제 로그인·RLS 적용은 미검증(이슈15·18).** (2026-07-03)
 
-*   **[ ] Supabase Auth 로그인 연동**
-    *   이메일 기반 로그인/로그아웃, auth callback 처리, 세션 유지, 서브도메인 세션 공유 확인.
-*   **[ ] 권한 모델 구현 (`packages/permissions`)**
-    *   `User Role + Domain Permission + Data Scope` 조합 판단 helper. 도메인별 `none/read/write`, scope(`global/self/company` 우선, `department/program/fund/project`는 구조만).
-*   **[ ] JWT 권한 주입 (No-Join 최적화)**
-    *   로그인 시 `app_metadata.permissions`에 도메인별 권한 JSON을 실어 발급. RLS helper(`dev.can_read_domain`, `dev.can_write_domain` 등)가 조인 없이 JWT를 파싱하도록 구현.
-    *   JWT 권한 claim에는 `expires_at`을 포함하고, RLS helper는 access token 유효 여부와 별개로 `expires_at <= now()`인 임시 권한을 즉시 차단.
-*   **[ ] 기본 RLS 정책**
-    *   업무 테이블 기본 deny + 명시 허용, read/write 분리, 외부 사용자 self/company 제한. Hub 마스터·감사 로그·권한 테이블 정책.
-*   **[ ] UI 권한 처리**
-    *   권한 없음 → 접근 불가 페이지, 읽기 전용 → 쓰기 버튼 숨김/비활성, 만료 권한 자동 차단.
+*   **[x] Supabase Auth 로그인 연동**
+    *   이메일/비밀번호 로그인(server action), 로그아웃(`/auth/signout`), auth callback(`/auth/callback` code 교환), 미들웨어 세션 갱신+미인증 게이트, 서브도메인 쿠키 도메인(`NEXT_PUBLIC_COOKIE_DOMAIN`) 옵션.
+*   **[x] 권한 모델 구현 (`packages/permissions`)**
+    *   `User Role + Domain Permission + Data Scope` 조합 판단 helper. scope(`scopeTypeOf/scopeIdOf/hasGlobalScope`), 역할 템플릿 매트릭스(`ROLE_TEMPLATE_MATRIX`)→`templatePermissions`. `global/self/company` 우선, 나머지 구조만.
+*   **[x] JWT 권한 주입 (No-Join 최적화)**
+    *   `dev.custom_access_token_hook`가 토큰 발급/갱신 시 `dev.user_permissions`→`app_metadata.permissions/roles` 주입(config.toml 등록). RLS helper(`dev.can_read_domain/can_write_domain/get_scope_type/get_scope_id/has_role/is_master/can_merge_master`)가 무조인 파싱.
+    *   claim 에 `expires_at` 포함, helper 는 `expires_at <= now()` 임시 권한을 access token 유효와 무관하게 즉시 차단(TS `isExpired`도 동일 규칙).
+*   **[x] 기본 RLS 정책**
+    *   1.3 default deny 위에 명시 허용. hub 마스터/부속/병합/감사/첨부 + dev 권한 테이블 read/write 분리, 물리 삭제 금지(DELETE 정책 없음), 감사/권한 audit INSERT 는 service_role 전용, 병합은 `can_merge_master`. 외부 사용자 self/company view 는 Work 테이블 생기는 1.13/2 로 이월.
+*   **[x] UI 권한 처리**
+    *   권한 없음 → `NoPermissionScreen`, 읽기 전용 → `ReadOnlyBanner`+`PermissionProvider`(usePermissions), 만료 권한 자동 차단(canRead/canWrite 만료 반영). 세션/권한은 서버 layout 에서 주입.
 
 ### [ ] Phase 1.5 Y&A Dev — 사용자 및 권한 관리
 *(근거: yna_suite_hub_dev_functional_spec.md §15~19, yna_suite_api_contracts.md §16~18)*

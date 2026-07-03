@@ -47,7 +47,9 @@ export function SystemErrorScreen({ title, description, action }: StatusScreenPr
       icon={ServerCrash}
       tone="danger"
       title={title ?? "문제가 발생했습니다"}
-      description={description ?? "잠시 후 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요."}
+      description={
+        description ?? "잠시 후 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요."
+      }
       action={action}
     />
   );

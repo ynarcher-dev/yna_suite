@@ -1,3 +1,4 @@
+import * as React from "react";
 import { ChevronDown, Menu } from "lucide-react";
 import { cn } from "../../cn";
 import { IconButton } from "../icon-button";
@@ -10,6 +11,8 @@ export interface TopbarProps {
   /** 모바일 drawer 열기. */
   onMenuClick?: () => void;
   linkComponent?: LinkComponent;
+  /** 사용자 메뉴 하단 추가 영역(예: 로그아웃 폼). 앱이 주입한다. */
+  userMenuExtra?: React.ReactNode;
   className?: string;
 }
 
@@ -24,6 +27,7 @@ export function Topbar({
   services,
   onMenuClick,
   linkComponent,
+  userMenuExtra,
   className,
 }: TopbarProps) {
   const Link: LinkComponent = linkComponent ?? "a";
@@ -95,6 +99,7 @@ export function Topbar({
             >
               내 계정
             </Link>
+            {userMenuExtra}
           </div>
         </details>
       )}

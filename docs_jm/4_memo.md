@@ -95,6 +95,23 @@
 
 ---
 
+## 1-4. 인증/권한 메모 (Phase 1.4, 2026-07-03)
+
+### 📌 이슈 16: JWT 권한 주입 = Custom Access Token Hook 채택 (작성일자: 2026-07-03)
+*   **상황**: `app_metadata.permissions`(No-Join RLS 전제)를 어떻게 실을지 두 방식(① Auth Hook Postgres 함수, ② 권한 변경 시 Admin API `updateUserById`)이 가능.
+*   **문제**: ②는 권한 변경 지점마다 동기화 코드가 필요하고 누락 위험이 있으며, 토큰 갱신 시 자동 반영이 안 됨.
+*   **해결**: 사용자 승인하에 ① 채택. `20260703180002`에 `dev.custom_access_token_hook(event jsonb)`를 만들어 토큰 발급/갱신 시 `dev.user_permissions`를 읽어 `app_metadata.permissions`(도메인별 read/write/scope/expires_at) + `app_metadata.roles`(역할 배열)를 주입. `config.toml [auth.hook.custom_access_token]`에 `pg-functions://postgres/dev/custom_access_token_hook` 등록. 훅은 `supabase_auth_admin`으로 실행되므로 해당 역할에 EXECUTE + `user_permissions` SELECT 정책 부여, 일반 역할에는 EXECUTE REVOKE. 권한 변경 즉시 반영이 필요하면 짧은 access token TTL/세션 무효화를 운영 정책으로 병행(auth_permissions §9).
+
+### 📌 이슈 17: dev 폴백 세션(Supabase env 미설정 시) (작성일자: 2026-07-03)
+*   **상황**: 이 개발 기기는 Docker 미설치로 로컬 Supabase 를 못 띄우고, 운영 DB 직접 접속은 금지라 실제 로그인 세션을 만들 수 없음.
+*   **문제**: 실제 세션 없이 앱을 열면 미들웨어가 무한히 `/login`으로 보내 UI/배선 검증이 불가.
+*   **해결**: 사용자 승인하에 dev 폴백 유지. `NEXT_PUBLIC_SUPABASE_URL` 등 공개 env 파싱 실패 시(`parsePublicEnvSafe`→null) `isSupabaseConfigured=false`로 보고, 미들웨어는 게이트 없이 통과, `getSession()`은 master 템플릿 권한의 폴백 세션(`lib/auth/dev-session.ts`)을 돌려줌. env 가 설정되면(운영/스테이징은 항상 설정) 실제 JWT 경로로 자동 전환되어 폴백은 노출되지 않음. `/login`은 폴백 모드에서 안내 문구만 표시.
+
+### 📌 이슈 18: 인증 라우트 그룹 재구성 + 무-Docker 검증 범위 (작성일자: 2026-07-03)
+*   **상황**: 로그인/콜백 화면은 AppShell 없이, 대시보드 등은 AppShell 안에서 렌더해야 하고, 세션은 서버에서 읽어야 함.
+*   **문제**: 기존 루트 `layout.tsx`가 모든 경로를 AppFrame 으로 감싸 `/login`까지 shell 이 붙음. 또 페이지 이동으로 stale `.next/types`가 typecheck 를 깨뜨림.
+*   **해결**: 각 앱에서 `src/app/(app)/` 라우트 그룹을 만들어 대시보드를 옮기고, `(app)/layout.tsx`(서버)에서 `getSession()`→미인증이면 `/login` redirect 후 `AppFrame`(user/permissions 주입) 렌더. 루트 layout 은 `Providers`만. `demo-session.ts` 제거, 권한/세션은 `lib/auth/*`로 이관. 페이지 이동 후 `.next` 삭제→`build`로 라우트 타입 재생성해야 typecheck 통과(온보딩 주의). **미검증(이슈15 연장)**: 실제 로그인 왕복, RLS 정책 적용, hook claim 주입, `gen types`는 Docker/staging 환경에서 `supabase db reset`→`gen types`→테스트 계정 RLS 로 확인 필요. SQL 은 오프라인 파서로 145 stmts ALL_PASS.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

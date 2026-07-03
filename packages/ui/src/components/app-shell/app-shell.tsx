@@ -17,6 +17,8 @@ export interface AppShellProps {
   linkComponent?: LinkComponent;
   /** 사이드바 하단 영역. */
   sidebarFooter?: React.ReactNode;
+  /** 사용자 메뉴 하단 추가 영역(예: 로그아웃 폼). */
+  userMenuExtra?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -35,6 +37,7 @@ export function AppShell({
   services,
   linkComponent,
   sidebarFooter,
+  userMenuExtra,
   children,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -91,6 +94,7 @@ export function AppShell({
           user={user}
           services={services}
           linkComponent={linkComponent}
+          userMenuExtra={userMenuExtra}
           onMenuClick={() => setDrawerOpen(true)}
         />
         <main className={cn("flex-1 overflow-y-auto px-4 py-6 sm:px-6")}>

@@ -339,6 +339,8 @@ JWT 권한 claim에는 최소한 다음 값을 포함한다.
 
 `expires_at`이 `NULL`이면 만료 없는 권한으로 간주한다. `expires_at`이 지정된 임시 권한은 access token 자체가 아직 유효하더라도 RLS helper에서 `now()`와 비교하여 만료 즉시 차단해야 한다.
 
+구현(Phase 1.4): claim 주입은 **Custom Access Token Hook** `dev.custom_access_token_hook`이 담당한다. 토큰 발급/갱신 시 `dev.user_permissions`를 읽어 `app_metadata.permissions`(도메인별 read/write/scope/expires_at)와 `app_metadata.roles`(역할 배열)를 주입하며, `supabase/config.toml`의 `[auth.hook.custom_access_token]`에 `pg-functions://postgres/dev/custom_access_token_hook`로 등록한다(원격은 대시보드 Auth Hooks에서도 활성화). RLS helper는 `dev.can_read_domain`/`dev.can_write_domain`/`dev.get_scope_type`/`dev.get_scope_id`/`dev.has_role`/`dev.is_master`/`dev.can_merge_master`로 제공한다.
+
 권한 변경·회수·만료 시각 변경 후에는 클라이언트 세션의 권한 claim 갱신을 유도한다. 즉시 회수가 필요한 고위험 권한은 access token TTL을 짧게 유지하거나 권한 버전 claim/세션 무효화 정책을 함께 사용한다.
 
 예시: Work 프로그램 읽기 정책
