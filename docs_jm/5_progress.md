@@ -30,6 +30,21 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.5 Y&A Dev — 사용자 및 권한 관리
+*   **완료**:
+    *   **권한 변경 로직**(`packages/permissions/admin.ts`): 순수 함수 — `normalizePermission`(can_write→can_read 강제, global/self scope_id 정리), `validatePermissionInput`(과거 expires_at/누락 scope 대상 거부), `permissionEquals`/`diffPermissions`(감사 before/after), `isMasterLevelChange`/`isMasterRole`(확인 dialog 판정), `applyOverrides`(템플릿+override), `externalLinkGrant`(guest_startup→work company/scope_id, guest_expert→work self). 단위 테스트 17개 추가(permissions 총 29 pass).
+    *   **UI 네이티브 primitive**(`packages/ui`): `Select`(네이티브 select), `Switch`(role=switch), `Table`(THead/TBody/TR/TH/TD, design_system §12 규격), `ConfirmDialog`(controlled 오버레이, Escape/포커스). 무의존(이슈20).
+    *   **Dev 데이터 계층**(`apps/dev/src/lib/dev-data/`): `types.ts`, `mock-store.ts`(globalThis in-memory, seed 8명 — 내부 6·외부 2, 감사 seed), `service.ts`(server-only, 폴백=mock/설정=이슈19 오류 seam), `actions.ts`(`saveUserPermissions`/`applyTemplateToUser`/`setUserStatus`/`inviteUser`/`linkExternalUser` — 검증·안전장치·감사·revalidate), `templates.ts`(8종 표시), `display.ts`(라벨/마스킹/날짜).
+    *   **화면 6종**(`apps/dev/src/app/(app)/`): `/users`(목록·필터·초대·마스킹), `/users/[id]`(상세·권한편집기·템플릿적용·상태변경·이력), `/permission-matrix`(사용자×도메인 배지), `/permission-templates`(템플릿 기준 권한), `/external-links`(외부 연결 변경), `/permission-audit-logs`(감사 조회). 컴포넌트는 `components/users/*`(UsersTable/InviteDialog/UserDetail/PermissionEditor/DomainPermissionRow/ReasonActionDialog/ExternalLinksTable/AuditLogsTable). 대시보드 위젯 실제(mock) 집계 연결.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 permissions 29 + master-data 2 등 pass, `pnpm build`(hub/dev) 2/2. **dev 프로덕션 실행 후 6개 라우트 + 대시보드 HTTP 200**, mock 렌더 확인(사용자 8명·활성 6·만료예정 1·외부 2, 매트릭스 배지, 상세 편집기/이력).
+    *   **미검증(이슈19 연장)**: Docker 미설치로 실제 auth.users/dev.user_permissions 조회·초대(Admin API)·RLS 적용·claim 갱신은 미검증. 데이터 seam 은 env 설정 시 명시적 오류로 막아둠.
+*   **다음 작업**: **Phase 1.6 Y&A Hub — 스타트업 마스터** — Hub 대시보드, 통합 검색, 스타트업 마스터 목록/상세·수정(field_history·audit·마스킹). (Hub 앱에 동일 네이티브 primitive 재사용, 마스터 데이터 계층 신설)
+*   **주의점**:
+    *   실데이터 경로는 mock seam(`dev-data/service.ts`·`actions.ts`) — Docker/staging 에서 `supabase db reset`→`gen types` 후 auth.users 조인 + Admin API 초대를 이 seam 에 붙인다(이슈19). mock 은 globalThis 캐시라 dev 서버 프로세스 내에서만 상태 유지(재시작 시 seed 로 리셋).
+    *   포트 3001 stale 서버가 자주 남음 — smoke 전 `Get-NetTCPConnection -LocalPort 3001` 로 점유 프로세스 종료 필요(이전 handoff 와 동일).
+    *   권한 편집기 만료일은 `datetime-local`(로컬 시각) → 저장 시 ISO 로 변환. 실제 tz 정밀도는 실데이터 연결 시 재확인.
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.4 인증 및 권한 기반
 *   **완료**:
     *   **권한 모델 확장**(`packages/permissions`): `scope.ts`(scopeTypeOf/scopeIdOf/hasGlobalScope), `templates.ts`(`ROLE_TEMPLATE_MATRIX` 8역할×7도메인 + `ROLE_DEFAULT_SCOPE` + `templatePermissions`). scope/templates 단위 테스트 8개 추가(총 12 pass).

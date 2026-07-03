@@ -135,21 +135,22 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] UI 권한 처리**
     *   권한 없음 → `NoPermissionScreen`, 읽기 전용 → `ReadOnlyBanner`+`PermissionProvider`(usePermissions), 만료 권한 자동 차단(canRead/canWrite 만료 반영). 세션/권한은 서버 layout 에서 주입.
 
-### [ ] Phase 1.5 Y&A Dev — 사용자 및 권한 관리
+### [x] Phase 1.5 Y&A Dev — 사용자 및 권한 관리
 *(근거: yna_suite_hub_dev_functional_spec.md §15~19, yna_suite_api_contracts.md §16~18)*
+> 진행: 6개 화면(사용자 목록/상세·매트릭스·템플릿·외부 연결·감사) + 서버 액션(초대/권한저장/템플릿적용/상태변경/외부연결). `packages/permissions` 에 순수 권한변경 로직(정규화·검증·diff·master판정·override·외부연결) + 단위 테스트 17개. `packages/ui` 네이티브 primitive(Select/Switch/Table/ConfirmDialog). **무-Docker 환경이라 데이터는 mock seam 으로 구동(이슈19), UI 컴포넌트는 네이티브 무의존(이슈20).** typecheck 10/10·lint 10/10·test 29(permissions)+2·build 2/2·dev smoke(6개 라우트 HTTP 200 + mock 렌더) 통과. (2026-07-03)
 
-*   **[ ] 사용자 목록/상세**
-    *   이름·이메일·역할·상태·마지막 로그인 컬럼, 검색/역할·상태 필터.
-*   **[ ] 사용자 초대/생성**
-    *   Auth 계정 생성/초대와 권한 부여를 하나의 작업으로 처리(계정만 생기고 권한 누락되지 않게).
-*   **[ ] 도메인별 권한 관리**
-    *   7개 도메인 read/write 토글, scope_type/scope_id, expires_at, 권한 템플릿(master/executive/management_office/investment_team/business_team/guest_expert/guest_startup/viewer) 적용 + 개별 override.
-*   **[ ] 권한 매트릭스 화면**
-    *   사용자×도메인 한눈에 관리(복잡하면 사용자 상세 중심으로 축소), 변경 전/후 diff 표시.
-*   **[ ] 권한 변경 안전장치 + 감사 로그**
-    *   `can_write=true`면 `can_read=true` 강제, master 권한 변경은 확인 dialog, 변경 사유 입력, `dev.permission_audit_logs`에 before/after 기록.
-*   **[ ] 외부 사용자 연결**
-    *   guest_startup(→startup_id, scope=company), guest_expert(→expert_id, scope=self) 연결. 외부 사용자는 Hub/Dev 직접 접근 불가.
+*   **[x] 사용자 목록/상세**
+    *   이름·이메일·역할·상태·마지막 로그인 컬럼, 검색/역할·상태 필터. 목록 이메일 마스킹, 행 클릭 상세 이동. 상세: 프로필·유형·연결 마스터·권한 이력.
+*   **[x] 사용자 초대/생성**
+    *   Auth 계정 생성/초대와 권한 부여를 하나의 작업으로 처리(외부 사용자는 연결 마스터 필수 검증). InviteDialog + `inviteUser` 액션 → 감사 기록.
+*   **[x] 도메인별 권한 관리**
+    *   7개 도메인 read/write 토글(Switch), scope_type/scope_id(Select/Input), expires_at(datetime-local), 권한 템플릿 8종 적용 + 개별 override(PermissionEditor + `saveUserPermissions`/`applyTemplateToUser`).
+*   **[x] 권한 매트릭스 화면**
+    *   사용자×도메인 PermissionBadge 현황 + 사용자 상세 링크(변경 전/후 diff 는 상세의 사유 dialog 에서). functional_spec §17 "상세 중심 축소" 방침 채택.
+*   **[x] 권한 변경 안전장치 + 감사 로그**
+    *   `can_write=true`면 `can_read=true` 강제(normalizePermission), 과거 expires_at 거부, master 수준 변경은 확인 dialog(escalation), 변경 사유 필수, before/after 를 도메인별 감사 항목으로 기록. 감사 조회 화면(검색/작업 필터) 포함.
+*   **[x] 외부 사용자 연결**
+    *   guest_startup(→startup_id, scope=company), guest_expert(→expert_id, scope=self) 연결(`externalLinkGrant` + `linkExternalUser`). 외부 사용자는 hub/dev 권한 제거로 직접 접근 불가.
 
 ### [ ] Phase 1.6 Y&A Hub — 스타트업 마스터
 *(근거: yna_suite_hub_dev_functional_spec.md §4~7)*

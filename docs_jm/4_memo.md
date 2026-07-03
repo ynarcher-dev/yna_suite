@@ -112,6 +112,18 @@
 *   **문제**: 기존 루트 `layout.tsx`가 모든 경로를 AppFrame 으로 감싸 `/login`까지 shell 이 붙음. 또 페이지 이동으로 stale `.next/types`가 typecheck 를 깨뜨림.
 *   **해결**: 각 앱에서 `src/app/(app)/` 라우트 그룹을 만들어 대시보드를 옮기고, `(app)/layout.tsx`(서버)에서 `getSession()`→미인증이면 `/login` redirect 후 `AppFrame`(user/permissions 주입) 렌더. 루트 layout 은 `Providers`만. `demo-session.ts` 제거, 권한/세션은 `lib/auth/*`로 이관. 페이지 이동 후 `.next` 삭제→`build`로 라우트 타입 재생성해야 typecheck 통과(온보딩 주의). **미검증(이슈15 연장)**: 실제 로그인 왕복, RLS 정책 적용, hook claim 주입, `gen types`는 Docker/staging 환경에서 `supabase db reset`→`gen types`→테스트 계정 RLS 로 확인 필요. SQL 은 오프라인 파서로 145 stmts ALL_PASS.
 
+## 1-5. 사용자·권한 관리 메모 (Phase 1.5, 2026-07-03)
+
+### 📌 이슈 19: Dev 사용자·권한 실데이터 경로를 mock 으로 대체(무-Docker) (작성일자: 2026-07-03)
+*   **상황**: Phase 1.5(사용자 목록/상세·초대·권한 변경·매트릭스·외부 연결·감사)는 `auth.users` + `dev.user_permissions` 조회/변경과 초대(Admin API, service role)를 필요로 함.
+*   **문제**: 이 기기는 Docker 미설치로 로컬 Supabase 를 못 띄우고(이슈15·17), 운영 DB 직접 접속은 금지라 실제 사용자/권한 데이터를 읽고 쓸 수 없음. `packages/database/src/types.ts` 도 아직 placeholder(gen types 미실행).
+*   **해결**: 사용자 승인(무의존·네이티브 방침)하에 **데이터 계층을 분기(seam)** 로 구현. `apps/dev/src/lib/dev-data/service.ts`·`actions.ts` 는 `isSupabaseConfigured=false`(dev 폴백)면 `mock-store.ts`(globalThis 캐시 in-memory)로 화면·배선·안전장치·감사 흐름을 실제로 구동하고, env 가 설정된 경우(운영/스테이징)에는 명시적으로 "Docker/staging 에서 연결 예정" 오류를 던져 미완성 실데이터 경로가 조용히 노출되지 않게 함. Docker/staging 에서 `supabase db reset`→`gen types` 후 이 seam 에 실제 쿼리(auth.users 조인 + dev.user_permissions + Admin API 초대)를 붙이면 됨. mock 스토어는 운영 env 에서 절대 사용되지 않음.
+
+### 📌 이슈 20: 인터랙티브 UI 컴포넌트를 네이티브(무의존)로 구현 (작성일자: 2026-07-03)
+*   **상황**: Phase 1.5 는 드롭다운·확인 dialog·데이터 테이블이 필요. 1.2 에서 이들(Select/Dialog/DataTable)은 Radix/TanStack 승인 시점(1.5)으로 이연했음(이슈09 계열).
+*   **문제**: Rule 8.3(외부 패키지 추가는 사전 승인)·미사용 의존성 금지. 새 의존성을 추가할지, 네이티브로 갈지 결정 필요.
+*   **해결**: 사용자 결정으로 **외부 패키지 없이 네이티브 구현**(AppShell 의 네이티브 `<details>` 선례와 동일 방침). `packages/ui` 에 `Select`(네이티브 `<select>`)·`Switch`(role=switch button)·`Table`(시맨틱 `<table>`, design_system §12 규격)·`ConfirmDialog`(controlled 오버레이, Escape 취소·확인 포커스) 추가. `PermissionMatrix`/`DomainAccessSwitch`(design_system §10 — dev 소유)는 `apps/dev` 에서 이 primitive 로 조립. Radix/TanStack 은 실제 필요(복잡한 a11y/가상 스크롤)가 생기면 재검토.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.
