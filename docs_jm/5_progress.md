@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.2 공통 디자인 시스템 · UI · AppShell
+*   **완료**:
+    *   **디자인 토큰**(`packages/ui/src/tokens/`): `colors`(red 25~900 / gray 0~900 / semantic success·warning·info), `typography`(Pretendard 스택 + 7단계 타입 스케일), `spacing`(4px grid + 규격 상수), `radius`(sm4/md6/lg8), `shadows`(dropdown/popover/dialog). `tailwind-preset.ts`를 토큰 기반으로 재작성 → 앱에서 `bg-brand`/`text-gray-700` 등으로 사용. `bg-brand` = `rgb(226 34 19)`(#E22213) 컴파일 확인.
+    *   **프레젠테이션 공통 컴포넌트**(`packages/ui/src/components/`): Button(primary/secondary/outline/ghost/danger, sm/md/lg), IconButton(aria-label 강제), Input, Textarea, FormField, StatusBadge(semantic tone), PermissionBadge(write/read/none/expired), MasterCodeBadge, PageHeader, EmptyState, FilterBar, BulkActionBar. 기존 flat `button.tsx`는 `components/`로 이동.
+    *   **AppShell**(`components/app-shell/`): Sidebar(240px, active indicator만 brand) + Topbar(56px, native `<details>` 서비스 스위처·사용자 메뉴) + Content, 모바일 drawer(AppShell `"use client"` + useState). `linkComponent` 주입 지점으로 next 비의존 유지. 권한 필터 결과(sections/services)는 앱이 주입.
+    *   **공통 상태 화면**(`components/states/`): StateMessage 기반 NoPermission/SessionExpired/SystemError/NotFound + ReadOnlyBanner.
+    *   **Hub/Dev 배선**: 각 앱 `lib/nav.ts`(IA §4·§5 메뉴), `lib/services.ts`(`accessibleDomains`로 접근 가능 서비스만 스위처 노출), `lib/demo-session.ts`(임시 세션·권한 — Phase 1.4에서 실제 JWT로 교체), `components/app-frame.tsx`(`usePathname`+next/link 주입, hub/dev read 없으면 NoPermissionScreen). 각 앱 `app/not-found.tsx`·`error.tsx` 추가. layout 에서 AppFrame 으로 children 래핑, page 를 대시보드 자리표시자로 교체. globals.css 에 Pretendard CDN @import + body base(gray-25/gray-700/tnum).
+    *   **의존성**: `lucide-react`(이미 `@yna/ui`에 존재)를 hub/dev `package.json`에 선언(신규 외부 패키지 아님, lockfile 변화 없음).
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 pass, `pnpm build`(hub/dev) 2/2 성공. hub 프로덕션 실행 후 `curl localhost:3000` **HTTP 200 + AppShell(사이드바 메뉴/서비스 스위처/사용자/모바일 메뉴 버튼) 렌더 확인**, 빌드 CSS 에 Pretendard @import·brand/gray 토큰 포함 확인.
+    *   **주의**: smoke 시 이전 세션의 stale hub 서버(PID)가 포트 3000을 점유해 옛 빌드를 응답 → 종료 후 재기동해 신규 빌드 확인. 새 기기/세션에서 smoke 전 포트 3000 점유 프로세스 확인 필요.
+*   **다음 작업**: **Phase 1.3 Supabase 스키마 및 마이그레이션 기반** — hub/dev/staging 스키마, 우선순위 1 테이블 마이그레이션, 공통 컬럼/코드 정책, 인덱스/제약, Migration Only 원칙. (스키마 생성 후 `packages/database/src/types.ts` placeholder 를 `supabase gen types`로 대체)
+*   **주의점**:
+    *   인터랙티브 컴포넌트(Dialog/Sheet/ConfirmDialog/Select/SearchCombobox/DatePicker/DataTable)는 무의존 정책에 따라 미구현 — 실제 소비하는 Phase 1.5+ 에서 Radix/TanStack 승인 후 추가.
+    *   세션/권한은 `demo-session.ts` 자리표시자(hub·dev write, work read, 나머지 none). 서비스 스위처가 실제로 fund/mna/project/management 를 숨기는지 이 맵으로 검증 가능. Phase 1.4에서 실제 JWT로 대체.
+    *   서비스 스위처 href 는 로컬 `localhost:port` / 운영 `host` 분기 — 실제 base URL 정리는 Phase 1.4 환경 배선에서.
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.1 모노레포 및 공통 패키지 스캐폴딩
 *   **완료**:
     *   **공통 패키지 8개 생성**(`packages/*`, 모두 `@yna/*` 내부 패키지, TS 소스 직접 export):

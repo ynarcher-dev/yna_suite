@@ -89,19 +89,20 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 의존성 방향 규칙 적용**
     *   루트 `eslint.config.mjs`(flat) + `no-restricted-imports`로 앱 간 직접 import 금지, `packages/ui`의 비즈니스/API/DB import 금지를 lint로 강제(음성 테스트로 규칙 동작 확인).
 
-### [ ] Phase 1.2 공통 디자인 시스템 · UI · AppShell
+### [x] Phase 1.2 공통 디자인 시스템 · UI · AppShell
 *(근거: yna_suite_design_system.md, yna_suite_information_architecture.md)*
+> 진행: 디자인 토큰(`packages/ui/tokens`) + tailwind preset, 프레젠테이션 공통 컴포넌트, 권한 기반 AppShell(Sidebar/Topbar/모바일 drawer), 공통 상태 화면 구현. Hub/Dev 동일 레이아웃 적용, typecheck/lint/test/build + 실행 smoke 통과. **인터랙티브 컴포넌트(Dialog/Select/SearchCombobox/DatePicker/DataTable)는 무의존 정책에 따라 실제 소비 Phase(1.5+)로 이연.** (2026-07-03)
 
-*   **[ ] 디자인 토큰 정의**
-    *   그레이스케일 중심 팔레트 + CI Red(`#E22213`) 제한 사용, 타이포(Pretendard), spacing(4px grid), radius/shadow 토큰을 `packages/ui/tokens`에 등록.
-*   **[ ] 핵심 공통 컴포넌트 구현**
-    *   Button/IconButton, Input/Select/SearchCombobox/DatePicker, Dialog/Sheet/ConfirmDialog, DataTable/FilterBar/BulkActionBar, StatusBadge/PermissionBadge/MasterCodeBadge, PageHeader/EmptyState.
-*   **[ ] AppShell 레이아웃 구현**
-    *   Sidebar(240px) + Topbar + Content, 현재 서비스명/사용자 표시, **권한 기반 메뉴 노출**, 모바일 drawer navigation.
-*   **[ ] 공통 상태 화면**
-    *   No-Permission(접근 불가), Read-Only 배지 처리, System Error, Not Found, 세션 만료 처리.
-*   **[ ] 완료 기준**
-    *   Hub/Dev가 동일 레이아웃 사용, 권한 없는 메뉴 미노출, 키보드 포커스 표시, 모바일에서 주요 화면 깨짐 없음.
+*   **[x] 디자인 토큰 정의**
+    *   그레이스케일 중심 팔레트 + CI Red(`#E22213`) 제한 사용, 타이포(Pretendard), spacing(4px grid), radius/shadow 토큰을 `packages/ui/tokens`(colors/typography/spacing/radius/shadows)에 등록하고 tailwind preset 으로 노출.
+*   **[x] 핵심 공통 컴포넌트 구현**
+    *   Button/IconButton, Input/Textarea/FormField, StatusBadge/PermissionBadge/MasterCodeBadge, PageHeader/EmptyState/FilterBar/BulkActionBar 구현(순수 표현). Select/SearchCombobox/DatePicker/Dialog/Sheet/ConfirmDialog/DataTable 는 Radix/TanStack 의존이 필요해 실제 사용 Phase(1.5+)에서 추가(미사용 의존성 금지 규칙).
+*   **[x] AppShell 레이아웃 구현**
+    *   Sidebar(240px) + Topbar(56px) + Content, 현재 서비스명/사용자 표시, **권한 기반 메뉴 노출**(서비스 스위처를 `accessibleDomains`로 필터), 모바일 drawer navigation. packages/ui 는 표현만 담당하고 권한 필터 결과는 앱이 주입.
+*   **[x] 공통 상태 화면**
+    *   No-Permission(접근 불가), Read-Only 배너, System Error(`error.tsx`), Not Found(`not-found.tsx`), 세션 만료 화면.
+*   **[x] 완료 기준**
+    *   Hub/Dev가 동일 AppShell 사용, 권한 없는 서비스 메뉴 미노출, 키보드 포커스 링(focus-visible ring) 표시, 모바일 drawer 전환 — smoke 로 Hub 렌더 확인.
 
 ### [ ] Phase 1.3 Supabase 스키마 및 마이그레이션 기반
 *(근거: yna_suite_data_model.md, yna_suite_database_operations.md)*

@@ -1,23 +1,38 @@
-import { APP_CONFIGS } from "@yna/config";
-import { Button } from "@yna/ui";
+import { PageHeader, StatusBadge } from "@yna/ui";
 
-const app = APP_CONFIGS.hub;
+/**
+ * Hub 대시보드 (자리표시자). 위젯 실제 데이터는 Phase 1.6 에서 연결한다.
+ * (근거: yna_suite_information_architecture.md §4)
+ */
+const STATS = [
+  { label: "스타트업 마스터", value: "—", tone: "neutral" as const },
+  { label: "전문가 마스터", value: "—", tone: "neutral" as const },
+  { label: "협력사 마스터", value: "—", tone: "neutral" as const },
+  { label: "검토 대기 병합", value: "—", tone: "warning" as const },
+];
 
-export default function HomePage() {
+export default function DashboardPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">{app.appName}</h1>
-        <p className="mt-1 text-sm text-neutral-500">{app.host} · Phase 1.1 스캐폴딩 확인용 화면</p>
-      </div>
-      <p className="text-sm text-neutral-600">
-        공통 패키지(@yna/ui, @yna/config)가 앱에 연결되었는지 확인하는 최소 화면입니다. 디자인
-        시스템과 AppShell 은 Phase 1.2 에서 구현합니다.
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="대시보드"
+        description="전사 마스터 원장 현황과 데이터 품질 상태를 한눈에 봅니다."
+      />
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {STATS.map((s) => (
+          <div key={s.label} className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">{s.label}</p>
+              <StatusBadge tone={s.tone}>대기</StatusBadge>
+            </div>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{s.value}</p>
+          </div>
+        ))}
+      </section>
+      <p className="text-sm text-gray-500">
+        Phase 1.2 공통 디자인 시스템 · AppShell 적용 화면입니다. 위젯 데이터와 세부 화면은 이후
+        Phase 에서 연결됩니다.
       </p>
-      <div className="flex gap-2">
-        <Button>기본 버튼</Button>
-        <Button variant="secondary">보조 버튼</Button>
-      </div>
-    </main>
+    </div>
   );
 }

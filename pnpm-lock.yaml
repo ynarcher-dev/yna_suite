@@ -68,6 +68,9 @@ importers:
       '@yna/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.2.7)
       next:
         specifier: ^15.1.0
         version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -135,6 +138,9 @@ importers:
       '@yna/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.2.7)
       next:
         specifier: ^15.1.0
         version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
