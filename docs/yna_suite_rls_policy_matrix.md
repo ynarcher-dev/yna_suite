@@ -159,6 +159,8 @@ RLS function은 SECURITY DEFINER 사용 여부를 신중히 결정한다.
 SECURITY DEFINER를 쓰는 경우 search_path를 고정한다.
 auth.uid()가 NULL인 경우 false를 반환한다.
 매 쿼리마다 dev.user_permissions 테이블을 조인하면 심각한 성능 저하가 발생하므로, RLS 헬퍼 함수는 auth.jwt()의 app_metadata에 캐싱된 권한 JSON(Custom Claims)을 무조인(No-Join)으로 파싱하도록 구현한다.
+단, JWT claim 기반 판정에서도 permissions.{domain}.expires_at을 함께 확인한다. 임시 권한은 access token이 아직 유효하더라도 expires_at <= now()이면 read/write/scope helper가 false를 반환해야 한다.
+권한 변경·회수 후 즉시 차단이 필요한 경우 짧은 access token TTL, 권한 버전 claim, 세션 무효화 중 하나 이상을 운영 정책으로 함께 적용한다.
 ```
 
 ## 6. Hub 마스터 테이블

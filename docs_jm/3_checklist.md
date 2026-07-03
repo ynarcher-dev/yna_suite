@@ -106,6 +106,7 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
     *   `User Role + Domain Permission + Data Scope` 조합 판단 helper. 도메인별 `none/read/write`, scope(`global/self/company` 우선, `department/program/fund/project`는 구조만).
 *   **[ ] JWT 권한 주입 (No-Join 최적화)**
     *   로그인 시 `app_metadata.permissions`에 도메인별 권한 JSON을 실어 발급. RLS helper(`dev.can_read_domain`, `dev.can_write_domain` 등)가 조인 없이 JWT를 파싱하도록 구현.
+    *   JWT 권한 claim에는 `expires_at`을 포함하고, RLS helper는 access token 유효 여부와 별개로 `expires_at <= now()`인 임시 권한을 즉시 차단.
 *   **[ ] 기본 RLS 정책**
     *   업무 테이블 기본 deny + 명시 허용, read/write 분리, 외부 사용자 self/company 제한. Hub 마스터·감사 로그·권한 테이블 정책.
 *   **[ ] UI 권한 처리**
@@ -181,7 +182,8 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[ ] 수동 병합 승인/반려/무시/보류**
     *   승인은 트랜잭션. 대표값 결정 → 밀려난 값 alias/identifier/history 보존 → source `merged` + merged_into_id → merge_events·audit_logs 기록.
 *   **[ ] 2단계 비동기 병합 반영**
-    *   1단계(동기): source 상태 변경만 빠르게 커밋. 2단계(비동기): 타 도메인 FK 일괄 업데이트를 백그라운드 워커로. 진행 중 조회는 `COALESCE(merged_into_id, id)`로 실시간 resolve.
+    *   1단계(동기): source 상태 변경만 빠르게 커밋. 2단계(비동기): 타 도메인 FK 일괄 업데이트를 백그라운드 워커로. 진행 중 조회는 공통 resolved view/helper로 실시간 resolve.
+    *   업무 도메인 쿼리는 hub 마스터 직접 조인 + 개별 `COALESCE` 작성을 금지하고 `packages/database` 표준 query helper 또는 DB view를 사용.
 
 ### [ ] Phase 1.11 감사 로그
 *(근거: yna_suite_data_model.md §11, yna_suite_security_policy.md §15, yna_suite_api_contracts.md §5)*

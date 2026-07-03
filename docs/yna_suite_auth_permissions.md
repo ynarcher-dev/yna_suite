@@ -291,10 +291,14 @@ RETURNS BOOLEAN
 LANGUAGE SQL
 STABLE
 AS $$
-    -- JWT 내 app_metadata -> permissions -> 도메인명 -> can_read 값을 파싱하여 무조인(No-Join) 고속 판정
+    -- JWT 내 app_metadata -> permissions -> 도메인명 값을 파싱하여 무조인(No-Join) 고속 판정
+    -- 임시 권한은 JWT claim에 expires_at을 함께 싣고, RLS helper에서 현재 시각과 비교한다.
     SELECT COALESCE(
         (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'can_read')::BOOLEAN,
         FALSE
+    ) AND COALESCE(
+        (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'expires_at')::TIMESTAMPTZ > now(),
+        TRUE
     );
 $$;
 ```
@@ -307,12 +311,35 @@ RETURNS BOOLEAN
 LANGUAGE SQL
 STABLE
 AS $$
-    SELECT COALESCE(
+    SELECT dev.can_read_domain(target_domain)
+    AND COALESCE(
         (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'can_write')::BOOLEAN,
         FALSE
     );
 $$;
 ```
+
+JWT 권한 claim에는 최소한 다음 값을 포함한다.
+
+```json
+{
+  "app_metadata": {
+    "permissions": {
+      "work": {
+        "can_read": true,
+        "can_write": false,
+        "scope_type": "company",
+        "scope_id": "uuid",
+        "expires_at": "2026-07-31T14:59:59Z"
+      }
+    }
+  }
+}
+```
+
+`expires_at`이 `NULL`이면 만료 없는 권한으로 간주한다. `expires_at`이 지정된 임시 권한은 access token 자체가 아직 유효하더라도 RLS helper에서 `now()`와 비교하여 만료 즉시 차단해야 한다.
+
+권한 변경·회수·만료 시각 변경 후에는 클라이언트 세션의 권한 claim 갱신을 유도한다. 즉시 회수가 필요한 고위험 권한은 access token TTL을 짧게 유지하거나 권한 버전 claim/세션 무효화 정책을 함께 사용한다.
 
 예시: Work 프로그램 읽기 정책
 
@@ -470,6 +497,7 @@ UI에서 버튼/메뉴를 숨기거나 비활성화했는가?
 RLS에서 같은 권한 조건을 강제하는가?
 권한 변경 또는 민감 액션이면 감사 로그를 남기는가?
 임시 권한이면 expires_at을 설정했는가?
+JWT 권한 claim에 expires_at을 포함하고 RLS helper에서 만료를 검증하는가?
 테스트 계정별 접근 테스트가 있는가?
 ```
 

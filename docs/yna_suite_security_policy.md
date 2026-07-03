@@ -114,6 +114,7 @@ User Role + Domain Permission + Data Scope
 권한 없음이 기본값이다.
 쓰기 권한은 읽기 권한보다 엄격하게 관리한다.
 임시 권한은 expires_at을 설정한다.
+JWT 기반 RLS를 쓰더라도 expires_at은 claim에 포함하고 RLS helper에서 now()와 비교해 만료 즉시 차단한다.
 권한 변경은 dev.permission_audit_logs에 기록한다.
 Y&A Dev 접근은 master 또는 제한된 관리자에게만 허용한다.
 ```

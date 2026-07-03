@@ -163,16 +163,31 @@ sequenceDiagram
 
 ### 4.2 Supabase Row Level Security (RLS) 적용 구조
 
-권한이 미세 튜닝되므로, 로그인 시점에 `dev.user_permissions`의 결과를 JWT `app_metadata.permissions`에 주입하고, DB 단 RLS는 이 JWT 값을 파싱해 권한을 빠르게 판단합니다. 매 row마다 권한 테이블을 조인하지 않는 No-Join 구조를 기본으로 합니다.
+권한이 미세 튜닝되므로, 로그인 시점에 `dev.user_permissions`의 결과를 JWT `app_metadata.permissions`에 주입하고, DB 단 RLS는 이 JWT 값을 파싱해 권한을 빠르게 판단합니다. 매 row마다 권한 테이블을 조인하지 않는 No-Join 구조를 기본으로 하되, 임시 권한의 `expires_at`은 JWT claim에 함께 포함하고 RLS helper에서 `now()`와 비교합니다.
 
 ```sql
 -- 예시: JWT claims를 읽는 공통 helper
-CREATE OR REPLACE FUNCTION dev.can_write_domain(target_domain TEXT)
+CREATE OR REPLACE FUNCTION dev.can_read_domain(target_domain TEXT)
 RETURNS BOOLEAN
 LANGUAGE SQL
 STABLE
 AS $$
     SELECT COALESCE(
+        (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'can_read')::BOOLEAN,
+        FALSE
+    ) AND COALESCE(
+        (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'expires_at')::TIMESTAMPTZ > now(),
+        TRUE
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION dev.can_write_domain(target_domain TEXT)
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+AS $$
+    SELECT dev.can_read_domain(target_domain)
+    AND COALESCE(
         (auth.jwt() -> 'app_metadata' -> 'permissions' -> target_domain ->> 'can_write')::BOOLEAN,
         FALSE
     );

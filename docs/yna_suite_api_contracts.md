@@ -579,7 +579,8 @@ hub.approve_merge_candidate(
 ```txt
 병합 승인의 1단계는 반드시 짧은 트랜잭션으로 처리한다.
 무거운 업무 FK 업데이트는 동기 트랜잭션에 포함하지 않는다.
-비동기 FK 반영 중 조회는 COALESCE(merged_into_id, id) 또는 resolve helper로 최종 마스터를 보장한다.
+비동기 FK 반영 중 조회는 공통 resolved view 또는 resolve helper로 최종 마스터를 보장한다.
+업무 도메인 API는 hub 마스터를 직접 조인하며 COALESCE를 반복 작성하지 않고, packages/database의 표준 query helper 또는 DB view를 사용한다.
 백그라운드 FK 업데이트가 일부 실패하면 merge_events.sync_status='failed'와 실패 상세를 남기고 재처리 가능해야 한다.
 service role 사용 시에도 actor_user_id를 명시적으로 기록한다.
 ```
@@ -683,6 +684,10 @@ dev write 권한 필요
 master 권한 변경은 추가 보호를 둔다.
 can_write=true이면 can_read=true를 강제한다.
 expires_at이 과거이면 거부한다.
+JWT app_metadata.permissions.{domain} claim에는 can_read/can_write/scope_type/scope_id/expires_at을 함께 반영한다.
+expires_at이 있는 임시 권한은 RLS helper에서 now()와 비교해 만료 즉시 false가 되어야 한다.
+권한 변경 후 대상 사용자의 클라이언트가 새 access token을 받도록 세션 갱신을 유도한다.
+즉시 회수가 필요한 권한은 짧은 access token TTL, 권한 버전 claim, 세션 무효화 정책 중 하나 이상을 적용한다.
 before/after를 permission_audit_logs에 기록한다.
 ```
 

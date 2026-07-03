@@ -414,6 +414,8 @@ CREATE TABLE dev.user_permissions (
 );
 ```
 
+`expires_at`은 임시 권한의 최종 만료 기준이다. JWT `app_metadata.permissions`에 권한을 캐싱할 때도 도메인별 `expires_at`을 함께 포함하고, RLS helper에서 `now()`와 비교해 만료된 권한을 차단한다.
+
 ### 5.2 `dev.permission_templates`
 
 권한 템플릿의 기본 도메인 권한과 scope 기본값을 저장한다. Phase 1에서는 복잡한 템플릿 편집기보다 템플릿 조회와 사용자 적용을 우선한다.

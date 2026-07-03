@@ -558,6 +558,8 @@ expires_at 변경
 권한 변경 시 reason 입력
 before/after permission_audit_logs 기록
 can_write=true이면 can_read=true 강제
+expires_at은 JWT 권한 claim과 RLS helper 만료 검증에 반영
+권한 변경 후 대상 사용자의 access token claim 갱신 유도
 master 권한 변경은 확인 dialog
 ```
 
