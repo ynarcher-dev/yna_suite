@@ -1,12 +1,43 @@
-# OS files
+# === Dependencies ===
+node_modules/
+.pnpm-store/
+
+# === Build output ===
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# === Turborepo ===
+.turbo/
+
+# === Test / coverage ===
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# === Environment (secret) files ===
+# 실제 secret이 들어간 파일은 커밋하지 않는다. (yna_suite_environment_deployment.md §11)
+# .env.example 만 커밋한다.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.staging
+.env.production
+
+# === OS files ===
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# IDE files
+# === IDE files ===
 .vscode/
 .idea/
 
-# Local/Agent files
+# === Local/Agent files ===
 .agents/
 .gemini/

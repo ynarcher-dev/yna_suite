@@ -28,6 +28,25 @@
 
 ---
 
+## 1-1. 개발 환경 구축 메모 (Phase 1.0, 2026-07-03)
+
+### 📌 이슈 05: 커밋된 `.env.local`에 실제 anon key 노출 (작성일자: 2026-07-03)
+*   **상황**: 저장소에 `.env.local`이 git으로 추적되고 있었고, 실제 Supabase URL과 anon key가 담겨 있었음.
+*   **문제**: 환경 문서(`yna_suite_environment_deployment.md` §11) 기준 `.env.local` 계열은 커밋 금지 대상. anon key는 RLS 전제하에 공개 가능한 publishable 키라 즉시 위험은 낮지만, 정책상 저장소에 남으면 안 됨.
+*   **해결**: `.gitignore`에 `.env`/`.env.local`/`.env.*.local` 등을 추가하고 `git rm --cached .env.local`로 추적만 해제(로컬 파일은 유지). 키가 publishable 등급이라 즉시 rotation은 불필요하나, 민감 secret이 아니었는지 확인 권장.
+
+### 📌 이슈 06: pnpm 전역 shim 설치 실패 → Corepack 경유 사용 (작성일자: 2026-07-03)
+*   **상황**: `corepack enable`이 `C:\Program Files\nodejs\`에 shim을 쓰려다 EPERM(권한) 오류로 실패.
+*   **문제**: 전역 `pnpm` 명령이 PATH에 없어 바로 실행 불가.
+*   **해결**: pnpm 버전을 `package.json`의 `packageManager: pnpm@11.9.0`으로 고정하고, 전역 shim 없이 `corepack pnpm <명령>`으로 실행. 관리자 권한으로 `corepack enable`을 한 번 실행하면 전역 `pnpm`도 사용 가능. README에 안내함.
+
+### 📌 이슈 07: Phase 1.0 앱별 스택 설치 이월 결정 (작성일자: 2026-07-03)
+*   **상황**: 체크리스트 1.0 "기본 라이브러리 설치"는 Next/React 등 앱별 1차 스택 전체 설치를 요구하나, 앱 스캐폴딩(1.1)이 아직 없음.
+*   **문제**: 앱이 없는 상태에서 프레임워크 스택을 설치할 위치가 없음.
+*   **해결**: 1.0에서는 루트 공통 도구(turbo/typescript/prettier)만 설치해 lockfile을 확정하고, 앱별 프레임워크 스택 설치와 Hub/Dev 실행·smoke 재현은 Phase 1.1로 이월. 체크리스트/진행로그에 이월 사유 명시.
+
+---
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

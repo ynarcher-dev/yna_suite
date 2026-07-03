@@ -1,0 +1,5 @@
+# pnpm workspace — apps/*(배포 단위)와 packages/*(공통 코드)를 워크스페이스로 묶는다.
+# (yna_suite_foldering.md §2, yna_suite_tech_stack.md §3)
+packages:
+  - "apps/*"
+  - "packages/*"

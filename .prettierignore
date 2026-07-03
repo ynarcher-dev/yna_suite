@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+pnpm-lock.yaml
+supabase/.temp/
+supabase/config.toml
+
+# 원본 설계 문서 / 진행 문서는 손으로 관리한다 (자동 재포맷 금지)
+docs/
+docs_jm/
