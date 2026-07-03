@@ -3,21 +3,21 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, FormField, Input } from "@yna/ui";
-import { setStartupStatus } from "@/lib/hub-data/actions";
+import type { ActionResult } from "@/lib/hub-data/types";
 
 /**
- * 스타트업 상태 변경(활성 ↔ 보관) 확인 dialog. 사유 필수 + audit 기록.
- * (근거: functional_spec §7 상태 변경, data_model §2 soft delete)
+ * 마스터 상태 변경(활성 ↔ 보관) 확인 dialog(공용). 사유 필수 + audit 기록.
+ * (근거: functional_spec §7~9 상태 변경, data_model §2 soft delete)
  */
-export function StatusChangeDialog({
+export function MasterStatusDialog({
   open,
-  id,
   nextStatus,
+  run,
   onClose,
 }: {
   open: boolean;
-  id: string;
   nextStatus: "active" | "archived";
+  run: (status: "active" | "archived", reason: string) => Promise<ActionResult>;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -29,7 +29,7 @@ export function StatusChangeDialog({
   function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await setStartupStatus({ id, status: nextStatus, reason });
+      const res = await run(nextStatus, reason);
       if (!res.ok) {
         setError(res.error ?? "처리에 실패했습니다.");
         return;

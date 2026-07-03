@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.7 Y&A Hub — 전문가 · 협력사 마스터
+*   **완료**:
+    *   **hub-data 엔티티 공용화**: `types.ts`(SimpleMaster→`ExpertMaster`/`PartnerMaster`/`MasterSummary` + `ExpertDetail`/`PartnerDetail`), `masters.ts`(`EDITABLE_EXPERT_FIELDS`·`EDITABLE_PARTNER_FIELDS`·`parseTags`·toSearchResult 를 MasterSummary 로 일반화), `display.ts`(email/phone 식별자 라벨, `EXPERT_IDENTIFIER_TYPES`/`PARTNER_IDENTIFIER_TYPES`, `PARTNER_TYPES`·`partnerTypeLabel`, isSensitiveIdentifier 확장).
+    *   **mock 계층**: `mock-seed.ts`(전문가 4[동명이인 이심사 2명]·협력사 4[사업자번호 일치 pt-temp→pt-2] 풀 레코드 + 식별자/별칭/필드이력/중복후보/감사 시드, expertSeq/partnerSeq), `mock-store.ts`(엔티티 공용 `subTables`·`appendAudit(entityType)`·`updateMasterFields`/`addIdentifierRow`/`addAliasRow`/`setMasterStatus` 제네릭 + 스타트업 래퍼, 검색을 전문가[이메일·소속]/협력사[사업자번호·대표자]로 확장), `mock-masters.ts`(전문가/협력사 조회+relatedWork).
+    *   **서버 액션**: `action-helpers.ts`(공용 actorName/guardConfigured/norm/normalizeIdentifier[email/phone 추가]/revalidateMaster + `runAddIdentifier`/`runAddAlias`/`runSetStatus` 제네릭 runner), `actions.ts`(startup 을 공용 helper/runner 로 리팩터), `actions-experts.ts`(전문분야 태그 diff 포함 `updateExpertBasic` + 식별자/별칭/상태), `actions-partners.ts`(partner_type 포함 `updatePartnerBasic` + 식별자/별칭/상태). `service.ts` 에 listExperts/getExpertDetail/listPartners/getPartnerDetail.
+    *   **공용 컴포넌트**(`components/masters/`): `detail-sections.tsx`(식별자[email/phone 마스킹·title 인자]·별칭·중복후보[basePath]·필드이력·감사·관련업무 — 스타트업 상세에서 이관), `master-add-dialog.tsx`(이관), `master-edit-dialog.tsx`(필드 정의 기반 제네릭), `master-status-dialog.tsx`(제네릭). 스타트업 상세를 이 공용 컴포넌트로 전환하고 startup 전용 edit/status/add/detail-sections 4파일 삭제.
+    *   **화면**: `components/experts/*`(experts-table·expert-detail-view — 연락처식별자·전문분야 chips·소속/직함 이력), `components/partners/*`(partners-table·partner-detail-view — 기관유형·식별자·관련 Project/Fund/M&A). 라우트 `(app)/experts`·`experts/[id]`·`partners`·`partners/[id]`. 통합 검색 결과의 전문가/협력사 상세 링크 활성화(`DETAIL_BASE` 맵).
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 utils 12 + master-data 2 + permissions 29 pass, `pnpm build`(hub/dev) 2/2. **hub 프로덕션 실행 후 8개 라우트 HTTP 200(`/experts`·`/experts/ex-1`·`/experts/ex-9`·`/partners`·`/partners/pt-2`·`/partners/pt-temp`·`/search?q=이심사`) + 없는 마스터 404**. 목록 마스킹(`h***@expert.example`·`301-**-*****`·대표자 `정*`/`김*`), 전문가 상세 전문분야 chips·연락처 식별자, 협력사 pt-temp 상세의 business_number_match 96점 중복후보, 검색 "이심사" 두 전문가(ex-3·ex-9) 별도 링크 확인.
+    *   **미검증(이슈21 연장)**: Docker 미설치로 실제 hub 스키마 조회·수정·RLS 적용은 미검증. 데이터 seam 은 env 설정 시 명시적 오류로 막아둠.
+*   **다음 작업**: **Phase 1.8 마스터 검색/자동완성 API + 임시 마스터 생성** — `GET /api/hub/master-search`(entity_type·q·limit·include_merged, 점수 반환), `POST /api/hub/masters/{entity_type}/temporary`(validation→normalized→TEMP→식별자/별칭→중복후보→audit), 로컬 입력 UX(자동완성→FK 연계→없으면 즉시 임시 생성). 지금 hub-data mock 검색/scoreMatch·임시 생성을 API 계약으로 승격하고 전문가/협력사 신규 등록을 이 API로 연결.
+*   **주의점**:
+    *   전문가/협력사 **신규 등록 UI 는 이번에 넣지 않음**(functional_spec §8·9 목록 필수기능에 신규 생성 없음). 임시 마스터 생성은 Phase 1.8 공통 API 로 처리 예정(이슈24). 스타트업만 목록에 신규 등록(TEMP) 유지.
+    *   중복 후보는 **표시만**(seed 조회). 자동 생성·승인/반려는 Phase 1.10(이슈24). `pt-temp`(business_number 일치)·`ex-9`(동명이인)는 자동 병합하지 않는다는 규칙의 시드 예시.
+    *   식별자/별칭/상태 변경 로직은 3개 엔티티가 `action-helpers` 의 공용 runner + `mock-store` 제네릭 mutation 을 공유한다. Docker/staging 연결 시 mock-store 제네릭만 실제 RPC/쿼리로 교체하면 3개 엔티티가 함께 전환된다.
+    *   목록 테이블(client)은 startup 과 동일하게 마스킹 전 원본을 props(RSC 페이로드)로 받는다 — UX 마스킹이며 최종 보안은 RLS(이슈23 방침 동일). 포트 3000 stale 서버 종료 후 smoke.
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.6 Y&A Hub — 스타트업 마스터
 *   **완료**:
     *   **Hub 데이터 계층**(`apps/hub/src/lib/hub-data/`): `types.ts`(StartupMaster/SimpleMaster/식별자·별칭·필드이력·중복후보·감사·대시보드·검색결과), `masters.ts`(순수 헬퍼 — `makeMasterCode`·`EDITABLE_STARTUP_FIELDS`·`scoreMatch` 검색점수·`toSearchResult`), `mock-seed.ts`(startup 6종[검증/임시/병합 포함]·expert 3·partner 3·식별자·별칭·필드이력·중복후보·병합이벤트·import batch·감사 seed), `mock-store.ts`(globalThis in-memory + 조회/검색/대시보드 집계 + 수정/식별자/별칭/상태/생성 mutation), `service.ts`(server-only, 폴백=mock/설정=이슈21 오류 seam), `actions.ts`(`updateStartupBasic`/`addIdentifier`/`addAlias`/`setStartupStatus`/`createStartup` — 사유 필수·merged 제한·field_history·normalized·중복방지·감사·revalidate), `display.ts`(검증/상태 배지·엔티티/식별자/별칭/액션 라벨·날짜).

@@ -1,6 +1,6 @@
 import type { EntityType } from "@yna/core";
 import { normalizeCompanyName } from "@yna/utils";
-import type { MasterSearchResult, SimpleMaster, StartupMaster } from "./types";
+import type { MasterSearchResult, MasterSummary, StartupMaster } from "./types";
 
 /**
  * 스타트업 마스터 관련 순수 헬퍼(코드 발급·수정 필드·검색 점수).
@@ -46,6 +46,42 @@ export const EDITABLE_STARTUP_FIELDS = [
 ] as const;
 
 export type EditableStartupField = (typeof EDITABLE_STARTUP_FIELDS)[number]["key"];
+
+/** 전문가 상세에서 수정 가능한 기본 필드. (functional_spec §8) 전문분야 태그는 별도 입력으로 처리. */
+export const EDITABLE_EXPERT_FIELDS = [
+  { key: "name", label: "이름", sensitive: false },
+  { key: "email", label: "이메일", sensitive: true },
+  { key: "phone", label: "연락처", sensitive: true },
+  { key: "organization", label: "소속", sensitive: false },
+  { key: "position", label: "직함", sensitive: false },
+] as const;
+
+/** 협력사 상세에서 수정 가능한 기본 필드. (functional_spec §9) */
+export const EDITABLE_PARTNER_FIELDS = [
+  { key: "name", label: "기관명", sensitive: false },
+  { key: "partnerType", label: "기관유형", sensitive: false },
+  { key: "businessNumber", label: "사업자번호", sensitive: true },
+  { key: "representativeName", label: "대표자명", sensitive: true },
+  { key: "phone", label: "대표 연락처", sensitive: true },
+  { key: "email", label: "대표 이메일", sensitive: true },
+  { key: "websiteUrl", label: "홈페이지", sensitive: false },
+  { key: "address", label: "주소", sensitive: false },
+] as const;
+
+/** 편집 필드 정의 공통 형태(제네릭 수정 dialog·액션 공용). */
+export interface EditableFieldDef {
+  key: string;
+  label: string;
+  sensitive: boolean;
+}
+
+/** 쉼표 구분 문자열을 태그 배열로. 공백 제거·빈 값 제외. */
+export function parseTags(input: string): string[] {
+  return input
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 /** 수정 폼이 다루는 필드 값 집합. */
 export type StartupEditInput = Record<EditableStartupField, string | null>;
@@ -109,10 +145,10 @@ export function scoreMatch(
   return { score: best, matched };
 }
 
-/** SimpleMaster/StartupMaster 를 검색 결과 형태로 투영한다. */
+/** 마스터 요약을 검색 결과 형태로 투영한다. */
 export function toSearchResult(
   m: Pick<
-    SimpleMaster,
+    MasterSummary,
     "id" | "entityType" | "masterCode" | "name" | "verificationStatus" | "status"
   >,
   score: number,

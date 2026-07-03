@@ -5,8 +5,13 @@ import type { MasterSearchResult } from "@/lib/hub-data/types";
 
 /**
  * 통합 검색 결과 목록. (근거: functional_spec §5)
- * 스타트업만 상세가 구현되어 있어 링크로 이동하고, 전문가/협력사는 Phase 1.7 에서 연결한다.
+ * 스타트업/전문가/협력사 모두 상세로 이동한다(매니저는 상세 미구현이라 비링크).
  */
+const DETAIL_BASE: Partial<Record<MasterSearchResult["entityType"], string>> = {
+  startup: "/startups",
+  expert: "/experts",
+  partner: "/partners",
+};
 export function SearchResults({ results, hasQuery }: { results: MasterSearchResult[]; hasQuery: boolean }) {
   if (!hasQuery) {
     return (
@@ -43,11 +48,12 @@ export function SearchResults({ results, hasQuery }: { results: MasterSearchResu
             </div>
           </div>
         );
+        const base = DETAIL_BASE[r.entityType];
         return (
           <li key={`${r.entityType}-${r.id}`}>
-            {r.entityType === "startup" ? (
+            {base ? (
               <Link
-                href={`/startups/${r.id}`}
+                href={`${base}/${r.id}`}
                 className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 {inner}

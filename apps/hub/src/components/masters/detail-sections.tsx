@@ -16,6 +16,11 @@ import type {
   MergeCandidateSummary,
 } from "@/lib/hub-data/types";
 
+/**
+ * 마스터 상세의 공통 섹션(식별자·별칭·중복후보·필드이력·감사·관련업무).
+ * 스타트업/전문가/협력사 상세에서 공용으로 사용한다. (근거: functional_spec §7~9)
+ */
+
 /** 섹션 공통 헤더(제목 + 우측 액션). */
 function SectionHead({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
@@ -28,8 +33,8 @@ function SectionHead({ title, action }: { title: string; action?: React.ReactNod
 
 function maskIdentifier(type: string, value: string): string {
   if (type === "business_number" || type === "corporation_number") return maskBusinessNumber(value);
-  if (type === "founder_phone") return maskPhone(value);
-  if (type === "founder_email") return maskEmail(value);
+  if (type === "founder_phone" || type === "phone") return maskPhone(value);
+  if (type === "founder_email" || type === "email") return maskEmail(value);
   return value;
 }
 
@@ -37,15 +42,17 @@ export function IdentifiersSection({
   identifiers,
   canWrite,
   onAdd,
+  title = "식별자",
 }: {
   identifiers: MasterIdentifier[];
   canWrite: boolean;
   onAdd: () => void;
+  title?: string;
 }) {
   return (
     <section className="flex flex-col gap-3">
       <SectionHead
-        title="식별자"
+        title={title}
         action={
           canWrite ? (
             <Button variant="outline" size="sm" onClick={onAdd}>
@@ -108,7 +115,13 @@ export function AliasesSection({
   );
 }
 
-export function MergeCandidatesSection({ candidates }: { candidates: MergeCandidateSummary[] }) {
+export function MergeCandidatesSection({
+  candidates,
+  basePath,
+}: {
+  candidates: MergeCandidateSummary[];
+  basePath: string;
+}) {
   return (
     <section className="flex flex-col gap-3">
       <SectionHead title="중복 후보" />
@@ -121,7 +134,7 @@ export function MergeCandidatesSection({ candidates }: { candidates: MergeCandid
             return (
               <li key={c.id}>
                 <Link
-                  href={`/startups/${c.otherId}`}
+                  href={`${basePath}/${c.otherId}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300"
                 >
                   <div className="min-w-0">
@@ -203,15 +216,20 @@ export function AuditSummarySection({ audit }: { audit: AuditEntry[] }) {
   );
 }
 
-export function RelatedWorkSection({ related }: { related: { label: string; count: number }[] }) {
+export function RelatedWorkSection({
+  related,
+  title = "관련 업무 이력 요약",
+  emptyDescription = "Work/Fund 등 도메인 앱 연결 후 신청·평가·멘토링 요약이 표시됩니다.",
+}: {
+  related: { label: string; count: number }[];
+  title?: string;
+  emptyDescription?: string;
+}) {
   return (
     <section className="flex flex-col gap-3">
-      <SectionHead title="관련 업무 이력 요약" />
+      <SectionHead title={title} />
       {related.every((r) => r.count === 0) ? (
-        <EmptyState
-          title="연결된 업무 이력 없음"
-          description="Work/Fund 등 도메인 앱 연결 후 신청·평가·멘토링 요약이 표시됩니다."
-        />
+        <EmptyState title="연결된 업무 이력 없음" description={emptyDescription} />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {related.map((r) => (

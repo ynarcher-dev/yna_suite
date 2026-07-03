@@ -44,8 +44,48 @@ export interface StartupMaster {
   updatedAt: string;
 }
 
-/** 전문가/협력사는 Phase 1.7 에서 상세를 구현한다. 여기서는 대시보드 집계·통합 검색 대상만. */
-export interface SimpleMaster {
+/** hub.experts 마스터 레코드. (functional_spec §8) */
+export interface ExpertMaster {
+  id: string;
+  masterCode: string;
+  name: string;
+  normalizedName: string;
+  email: string | null;
+  phone: string | null;
+  organization: string | null;
+  position: string | null;
+  expertiseTags: string[];
+  sourceDomain: string | null;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+  mergedIntoId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** hub.partners 마스터 레코드. (functional_spec §9) */
+export interface PartnerMaster {
+  id: string;
+  masterCode: string;
+  name: string;
+  normalizedName: string;
+  partnerType: string | null;
+  businessNumber: string | null;
+  representativeName: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  address: string | null;
+  sourceDomain: string | null;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+  mergedIntoId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 검색/대시보드가 다루는 마스터의 최소 투영(엔티티 공통). */
+export interface MasterSummary {
   id: string;
   entityType: EntityType;
   masterCode: string;
@@ -118,6 +158,30 @@ export interface StartupDetail {
   mergeCandidates: MergeCandidateSummary[];
   auditSummary: AuditEntry[];
   /** 관련 업무 이력 요약(Work 등). 실제 집계는 도메인 앱 연결 후. */
+  relatedWork: { label: string; count: number }[];
+}
+
+/** 전문가 마스터 상세 화면 데이터. (functional_spec §8 섹션 구성) */
+export interface ExpertDetail {
+  master: ExpertMaster;
+  identifiers: MasterIdentifier[];
+  aliases: MasterAlias[];
+  fieldHistory: FieldHistoryEntry[];
+  mergeCandidates: MergeCandidateSummary[];
+  auditSummary: AuditEntry[];
+  /** 관련 평가/멘토링 요약. 실제 집계는 Work 연결 후. */
+  relatedWork: { label: string; count: number }[];
+}
+
+/** 협력사 마스터 상세 화면 데이터. (functional_spec §9 섹션 구성) */
+export interface PartnerDetail {
+  master: PartnerMaster;
+  identifiers: MasterIdentifier[];
+  aliases: MasterAlias[];
+  fieldHistory: FieldHistoryEntry[];
+  mergeCandidates: MergeCandidateSummary[];
+  auditSummary: AuditEntry[];
+  /** 관련 Project/Fund/M&A 요약. 실제 집계는 도메인 앱 연결 후. */
   relatedWork: { label: string; count: number }[];
 }
 

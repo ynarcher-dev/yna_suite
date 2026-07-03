@@ -4,18 +4,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, MasterCodeBadge, PageHeader, StatusBadge } from "@yna/ui";
 import { usePermissions } from "@/lib/auth/permission-context";
-import { addAlias, addIdentifier, setStartupStatus, updateStartupBasic } from "@/lib/hub-data/actions";
-import { EDITABLE_STARTUP_FIELDS } from "@/lib/hub-data/masters";
+import {
+  addExpertAlias,
+  addExpertIdentifier,
+  setExpertStatus,
+  updateExpertBasic,
+} from "@/lib/hub-data/actions-experts";
+import { EDITABLE_EXPERT_FIELDS } from "@/lib/hub-data/masters";
 import {
   ALIAS_TYPES,
-  IDENTIFIER_TYPES,
+  EXPERT_IDENTIFIER_TYPES,
   aliasLabel,
   fmtDateTime,
   identifierLabel,
   masterStatusMeta,
   verificationMeta,
 } from "@/lib/hub-data/display";
-import type { StartupDetail } from "@/lib/hub-data/types";
+import type { ExpertDetail } from "@/lib/hub-data/types";
 import {
   AliasesSection,
   AuditSummarySection,
@@ -29,11 +34,11 @@ import { MasterEditDialog } from "@/components/masters/master-edit-dialog";
 import { MasterStatusDialog } from "@/components/masters/master-status-dialog";
 
 /**
- * 스타트업 마스터 상세. (근거: functional_spec §7)
- * 기본정보·식별자·별칭·필드 이력·관련 업무·중복 후보·감사 요약 + 수정/식별자/별칭/상태 액션.
- * merged source 는 수정이 제한된다.
+ * 전문가 마스터 상세. (근거: functional_spec §8)
+ * 기본정보·연락처 식별자·전문분야·소속/직함(필드) 이력·관련 평가/멘토링·별칭 + 수정/식별자/별칭/상태.
+ * 동명이인 가능성 때문에 이름만으로 자동 병합하지 않는다(중복 후보는 표시만, 승인은 Phase 1.10).
  */
-export function StartupDetailView({ detail }: { detail: StartupDetail }) {
+export function ExpertDetailView({ detail }: { detail: ExpertDetail }) {
   const { master } = detail;
   const { canWriteCurrent } = usePermissions();
   const [editOpen, setEditOpen] = useState(false);
@@ -47,8 +52,10 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
   const st = masterStatusMeta(master.status);
   const nextStatus = master.status === "archived" ? "active" : "archived";
 
-  const editInitial: Record<string, string> = {};
-  for (const f of EDITABLE_STARTUP_FIELDS) {
+  const editInitial: Record<string, string> = {
+    expertiseTags: master.expertiseTags.join(", "),
+  };
+  for (const f of EDITABLE_EXPERT_FIELDS) {
     const raw = master[f.key];
     editInitial[f.key] = typeof raw === "string" ? raw : "";
   }
@@ -57,7 +64,7 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={master.name}
-        description={master.legalName ?? undefined}
+        description={master.organization ?? undefined}
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge tone={v.tone}>{v.label}</StatusBadge>
@@ -77,7 +84,7 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
           {master.mergedIntoId && (
             <>
               {" "}
-              <Link href={`/startups/${master.mergedIntoId}`} className="font-medium text-brand-700 underline">
+              <Link href={`/experts/${master.mergedIntoId}`} className="font-medium text-brand-700 underline">
                 최종 마스터로 이동
               </Link>
             </>
@@ -97,49 +104,68 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
       )}
 
       <section className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-white p-4 sm:grid-cols-3">
-        <Field label="법인명" value={master.legalName} />
-        <Field label="대표자명" value={master.representativeName} />
-        <Field label="사업자번호" value={master.businessNumber} />
-        <Field label="법인등록번호" value={master.corporationNumber} />
-        <Field label="대표 연락처" value={master.phone} />
-        <Field label="대표 이메일" value={master.email} />
-        <Field label="홈페이지" value={master.websiteUrl} />
-        <Field label="주소" value={master.address} />
-        <Field label="산업분류" value={master.industry} />
-        <Field label="성장단계" value={master.stage} />
+        <Field label="이메일" value={master.email} />
+        <Field label="연락처" value={master.phone} />
+        <Field label="소속" value={master.organization} />
+        <Field label="직함" value={master.position} />
         <Field label="생성일" value={fmtDateTime(master.createdAt)} />
         <Field label="수정일" value={fmtDateTime(master.updatedAt)} />
       </section>
 
-      <IdentifiersSection identifiers={detail.identifiers} canWrite={canEdit} onAdd={() => setIdOpen(true)} />
-      <AliasesSection aliases={detail.aliases} canWrite={canEdit} onAdd={() => setAliasOpen(true)} />
-      <MergeCandidatesSection candidates={detail.mergeCandidates} basePath="/startups" />
+      <section className="flex flex-col gap-3">
+        <h2 className="text-md font-semibold text-gray-900">전문 분야</h2>
+        {master.expertiseTags.length === 0 ? (
+          <p className="text-sm text-gray-500">등록된 전문 분야가 없습니다.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {master.expertiseTags.map((tag) => (
+              <li key={tag} className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-sm text-gray-800">
+                {tag}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <IdentifiersSection
+        identifiers={detail.identifiers}
+        canWrite={canEdit}
+        onAdd={() => setIdOpen(true)}
+        title="연락처 식별자"
+      />
       <FieldHistorySection history={detail.fieldHistory} />
-      <RelatedWorkSection related={detail.relatedWork} />
+      <RelatedWorkSection related={detail.relatedWork} title="관련 평가/멘토링 요약" />
+      <AliasesSection aliases={detail.aliases} canWrite={canEdit} onAdd={() => setAliasOpen(true)} />
+      <MergeCandidatesSection candidates={detail.mergeCandidates} basePath="/experts" />
       <AuditSummarySection audit={detail.auditSummary} />
 
       <MasterEditDialog
         open={editOpen}
-        title="기본 정보 수정"
-        fields={EDITABLE_STARTUP_FIELDS.map((f) => ({ key: f.key, label: f.label, required: f.key === "name", fullWidth: f.key === "address" }))}
+        title="전문가 정보 수정"
+        fields={[
+          ...EDITABLE_EXPERT_FIELDS.map((f) => ({ key: f.key, label: f.label, required: f.key === "name" })),
+          { key: "expertiseTags", label: "전문분야 (쉼표로 구분)", fullWidth: true, placeholder: "예: SaaS, 핀테크" },
+        ]}
         initial={editInitial}
-        run={(values, reason) => updateStartupBasic({ id: master.id, values, reason })}
+        run={(values, reason) =>
+          updateExpertBasic({ id: master.id, values, expertiseTags: values.expertiseTags ?? "", reason })
+        }
         onClose={() => setEditOpen(false)}
       />
       <MasterStatusDialog
         open={statusOpen}
         nextStatus={nextStatus}
-        run={(status, reason) => setStartupStatus({ id: master.id, status, reason })}
+        run={(status, reason) => setExpertStatus({ id: master.id, status, reason })}
         onClose={() => setStatusOpen(false)}
       />
       <MasterAddDialog
         open={idOpen}
-        title="식별자 추가"
+        title="연락처 식별자 추가"
         typeLabel="식별자 유형"
         valueLabel="식별자 값"
-        valuePlaceholder="예: 123-45-67890"
-        options={IDENTIFIER_TYPES.map((t) => ({ value: t, label: identifierLabel(t) }))}
-        run={(type, value, reason) => addIdentifier({ id: master.id, identifierType: type, identifierValue: value, reason })}
+        valuePlaceholder="예: mentor@example.com"
+        options={EXPERT_IDENTIFIER_TYPES.map((t) => ({ value: t, label: identifierLabel(t) }))}
+        run={(type, value, reason) => addExpertIdentifier({ id: master.id, identifierType: type, identifierValue: value, reason })}
         onClose={() => setIdOpen(false)}
       />
       <MasterAddDialog
@@ -147,9 +173,9 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
         title="별칭 추가"
         typeLabel="별칭 유형"
         valueLabel="별칭"
-        valuePlaceholder="예: 예비창업팀 알파"
+        valuePlaceholder="예: Hong Mentor"
         options={ALIAS_TYPES.map((t) => ({ value: t, label: aliasLabel(t) }))}
-        run={(type, value, reason) => addAlias({ id: master.id, aliasType: type, aliasValue: value, reason })}
+        run={(type, value, reason) => addExpertAlias({ id: master.id, aliasType: type, aliasValue: value, reason })}
         onClose={() => setAliasOpen(false)}
       />
     </div>

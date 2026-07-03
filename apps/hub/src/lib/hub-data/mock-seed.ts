@@ -1,18 +1,21 @@
-import { normalizeCompanyName } from "@yna/utils";
+import { normalizeCompanyName, normalizeEmail, normalizePhone } from "@yna/utils";
+import { seedExperts, seedPartners, seedStartups } from "./mock-seed-masters";
 import type {
   AuditEntry,
+  ExpertMaster,
   FieldHistoryEntry,
   MasterAlias,
   MasterIdentifier,
+  PartnerMaster,
   RecentImportBatch,
   RecentMergeEvent,
-  SimpleMaster,
   StartupMaster,
 } from "./types";
 
 /**
- * Hub 마스터 mock 시드. (근거: 4_memo 이슈17·19 — Docker 미설치로 실제 hub 스키마 불가)
+ * Hub 마스터 mock 시드 조립. (근거: 4_memo 이슈17·19·21 — Docker 미설치로 실제 hub 스키마 불가)
  * globalThis 캐시에 담아 dev 서버 프로세스 내에서 화면·배선을 검증한다.
+ * 마스터 원장 레코드는 mock-seed-masters.ts, 부속 테이블(식별자/별칭/이력/중복후보/감사)은 여기서 둔다.
  * Supabase 가 설정되면 사용되지 않으며 운영/스테이징에는 노출되지 않는다.
  */
 
@@ -29,8 +32,8 @@ export interface MergeCandidateRow {
 
 export interface MockState {
   startups: StartupMaster[];
-  experts: SimpleMaster[];
-  partners: SimpleMaster[];
+  experts: ExpertMaster[];
+  partners: PartnerMaster[];
   identifiers: (MasterIdentifier & { entityId: string })[];
   aliases: (MasterAlias & { entityId: string })[];
   fieldHistory: (FieldHistoryEntry & { entityId: string })[];
@@ -39,236 +42,54 @@ export interface MockState {
   importBatches: RecentImportBatch[];
   audit: AuditEntry[];
   startupSeq: number;
+  expertSeq: number;
+  partnerSeq: number;
   auditSeq: number;
   idSeq: number;
 }
 
-function startup(
-  partial: Omit<StartupMaster, "normalizedName" | "corporationNumber"> &
-    Partial<Pick<StartupMaster, "corporationNumber">>,
-): StartupMaster {
-  return {
-    corporationNumber: null,
-    ...partial,
-    normalizedName: normalizeCompanyName(partial.name),
-  };
-}
-
-function simple(
-  id: string,
-  entityType: "expert" | "partner",
-  masterCode: string,
-  name: string,
-  verificationStatus: SimpleMaster["verificationStatus"],
-  status: SimpleMaster["status"] = "active",
-): SimpleMaster {
-  return {
-    id,
-    entityType,
-    masterCode,
-    name,
-    normalizedName: normalizeCompanyName(name),
-    verificationStatus,
-    status,
-  };
-}
-
 export function seedState(): MockState {
-  const startups: StartupMaster[] = [
-    startup({
-      id: "st-1",
-      masterCode: "YNA-ST-2026-0001",
-      name: "알파테크",
-      legalName: "주식회사 알파테크",
-      businessNumber: "1234567890",
-      corporationNumber: "110111-1234567",
-      representativeName: "홍길동",
-      phone: "01012345678",
-      email: "contact@alpha.example",
-      websiteUrl: "https://alpha.example",
-      address: "서울특별시 강남구 테헤란로 1",
-      industry: "SaaS",
-      stage: "Series A",
-      sourceDomain: "work",
-      verificationStatus: "verified",
-      status: "active",
-      mergedIntoId: null,
-      createdAt: "2026-03-01T02:00:00Z",
-      updatedAt: "2026-06-20T05:00:00Z",
-    }),
-    startup({
-      id: "st-2",
-      masterCode: "YNA-ST-2026-0002",
-      name: "베타솔루션",
-      legalName: "베타솔루션 주식회사",
-      businessNumber: "2233445566",
-      corporationNumber: null,
-      representativeName: "김영희",
-      phone: "01033334444",
-      email: "hello@beta.example",
-      websiteUrl: null,
-      address: "부산광역시 해운대구 센텀로 99",
-      industry: "물류",
-      stage: "Seed",
-      sourceDomain: "fund",
-      verificationStatus: "verified",
-      status: "active",
-      mergedIntoId: null,
-      createdAt: "2026-03-05T02:00:00Z",
-      updatedAt: "2026-05-01T05:00:00Z",
-    }),
-    startup({
-      id: "st-3",
-      masterCode: "YNA-ST-2026-0003",
-      name: "감마랩스",
-      legalName: null,
-      businessNumber: null,
-      representativeName: "이철수",
-      phone: "01055556666",
-      email: null,
-      websiteUrl: "https://gamma.example",
-      address: null,
-      industry: "바이오",
-      stage: "예비창업",
-      sourceDomain: "work",
-      verificationStatus: "needs_review",
-      status: "active",
-      mergedIntoId: null,
-      createdAt: "2026-04-10T02:00:00Z",
-      updatedAt: "2026-04-10T02:00:00Z",
-    }),
-    startup({
-      id: "st-4",
-      masterCode: "YNA-ST-2026-0004",
-      name: "델타모빌리티",
-      legalName: "델타모빌리티 주식회사",
-      businessNumber: "5566778899",
-      representativeName: "박민수",
-      phone: "01077778888",
-      email: "info@delta.example",
-      websiteUrl: null,
-      address: "대전광역시 유성구 대학로 291",
-      industry: "모빌리티",
-      stage: "Series B",
-      sourceDomain: "mna",
-      verificationStatus: "verified",
-      status: "active",
-      mergedIntoId: null,
-      createdAt: "2026-02-01T02:00:00Z",
-      updatedAt: "2026-06-01T05:00:00Z",
-    }),
-    startup({
-      id: "st-old",
-      masterCode: "YNA-ST-2026-0009",
-      name: "알파테크(구)",
-      legalName: null,
-      businessNumber: null,
-      representativeName: "홍길동",
-      phone: "01012345678",
-      email: null,
-      websiteUrl: null,
-      address: null,
-      industry: null,
-      stage: null,
-      sourceDomain: "work",
-      verificationStatus: "verified",
-      status: "merged",
-      mergedIntoId: "st-1",
-      createdAt: "2026-01-15T02:00:00Z",
-      updatedAt: "2026-06-18T05:00:00Z",
-    }),
-    startup({
-      id: "st-temp",
-      masterCode: "TEMP-ST-2026-0092",
-      name: "알파",
-      legalName: null,
-      businessNumber: null,
-      representativeName: "홍길동",
-      phone: "01012345678",
-      email: "hong@alpha.example",
-      websiteUrl: null,
-      address: null,
-      industry: null,
-      stage: "예비창업",
-      sourceDomain: "work",
-      verificationStatus: "temporary",
-      status: "active",
-      mergedIntoId: null,
-      createdAt: "2026-07-01T02:00:00Z",
-      updatedAt: "2026-07-01T02:00:00Z",
-    }),
-  ];
-
-  const experts: SimpleMaster[] = [
-    simple("ex-1", "expert", "YNA-EX-2026-0001", "홍멘토", "verified"),
-    simple("ex-2", "expert", "YNA-EX-2026-0002", "김전문", "verified"),
-    simple("ex-9", "expert", "YNA-EX-2026-0009", "이심사", "pending"),
-  ];
-
-  const partners: SimpleMaster[] = [
-    simple("pt-1", "partner", "YNA-PT-2026-0001", "한국벤처투자", "verified"),
-    simple("pt-2", "partner", "YNA-PT-2026-0002", "스마트법무법인", "verified"),
-    simple("pt-3", "partner", "YNA-PT-2026-0003", "창업진흥원", "needs_review"),
-  ];
-
   const identifiers: MockState["identifiers"] = [
     ident("id-1", "st-1", "business_number", "123-45-67890", "1234567890", true),
     ident("id-2", "st-1", "founder_phone", "010-1234-5678", "01012345678", false),
     ident("id-3", "st-1", "website_domain", "alpha.example", "alpha.example", false),
     ident("id-4", "st-2", "business_number", "223-34-45566", "2233445566", true),
     ident("id-5", "st-temp", "founder_phone", "010-1234-5678", "01012345678", true),
+    ident("id-6", "ex-1", "email", "hong.mentor@expert.example", normalizeEmail("hong.mentor@expert.example"), true),
+    ident("id-7", "ex-1", "phone", "010-2345-0001", normalizePhone("010-2345-0001"), false),
+    ident("id-8", "ex-2", "email", "kim.pro@expert.example", normalizeEmail("kim.pro@expert.example"), true),
+    ident("id-9", "pt-1", "business_number", "301-12-00123", "3011200123", true),
+    ident("id-10", "pt-2", "business_number", "107-88-12345", "1078812345", true),
+    ident("id-11", "pt-temp", "business_number", "107-88-12345", "1078812345", true),
   ];
 
   const aliases: MockState["aliases"] = [
     alias("al-1", "st-1", "previous_name", "예비창업팀 알파"),
     alias("al-2", "st-1", "short_name", "알파"),
     alias("al-3", "st-4", "brand_name", "델타"),
+    alias("al-4", "ex-1", "english_name", "Hong Mentor"),
+    alias("al-5", "pt-1", "short_name", "한벤투"),
+    alias("al-6", "pt-2", "previous_name", "스마트 법률사무소"),
   ];
 
   const fieldHistory: MockState["fieldHistory"] = [
-    {
-      id: "fh-1",
-      entityId: "st-1",
-      fieldName: "name",
-      oldValue: "예비창업팀 알파",
-      newValue: "알파테크",
-      changeReason: "법인 설립에 따른 사명 확정",
-      changedBy: "관리자(개발)",
-      changedAt: "2026-04-01T05:00:00Z",
-    },
-    {
-      id: "fh-2",
-      entityId: "st-1",
-      fieldName: "legalName",
-      oldValue: null,
-      newValue: "주식회사 알파테크",
-      changeReason: "법인 설립 정보 반영",
-      changedBy: "관리자(개발)",
-      changedAt: "2026-04-01T05:00:00Z",
-    },
+    history("fh-1", "st-1", "name", "예비창업팀 알파", "알파테크", "법인 설립에 따른 사명 확정", "2026-04-01T05:00:00Z"),
+    history("fh-2", "st-1", "legalName", null, "주식회사 알파테크", "법인 설립 정보 반영", "2026-04-01T05:00:00Z"),
+    history("fh-3", "ex-1", "organization", "프리랜서", "알파벤처스", "소속 변경 확인", "2026-06-10T05:00:00Z"),
+    history("fh-4", "pt-2", "name", "스마트 법률사무소", "스마트법무법인", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z"),
   ];
 
   const mergeCandidates: MergeCandidateRow[] = [
-    {
-      id: "mc-1",
-      entityType: "startup",
-      sourceId: "st-temp",
-      targetId: "st-1",
-      score: 86,
-      reasons: ["normalized_name_similar", "representative_name_match", "founder_phone_match"],
-      status: "pending",
-      createdAt: "2026-07-01T02:05:00Z",
-    },
-    {
-      id: "mc-2",
-      entityType: "startup",
-      sourceId: "st-3",
-      targetId: "st-4",
-      score: 62,
-      reasons: ["normalized_name_similar"],
-      status: "rejected",
-      createdAt: "2026-05-02T02:05:00Z",
-    },
+    candidate("mc-1", "startup", "st-temp", "st-1", 86, [
+      "normalized_name_similar",
+      "representative_name_match",
+      "founder_phone_match",
+    ], "pending", "2026-07-01T02:05:00Z"),
+    candidate("mc-2", "startup", "st-3", "st-4", 62, ["normalized_name_similar"], "rejected", "2026-05-02T02:05:00Z"),
+    candidate("mc-3", "partner", "pt-temp", "pt-2", 96, [
+      "business_number_match",
+      "representative_name_match",
+    ], "pending", "2026-06-29T02:05:00Z"),
   ];
 
   const mergeEvents: RecentMergeEvent[] = [
@@ -307,39 +128,17 @@ export function seedState(): MockState {
   ];
 
   const audit: AuditEntry[] = [
-    {
-      id: "au-1",
-      actorName: "관리자(개발)",
-      action: "merge",
-      entityType: "startup",
-      entityId: "st-1",
-      reason: "동일 대표자 및 유사명 확인",
-      createdAt: "2026-06-18T05:00:00Z",
-    },
-    {
-      id: "au-2",
-      actorName: "관리자(개발)",
-      action: "update",
-      entityType: "startup",
-      entityId: "st-1",
-      reason: "법인 설립 정보 반영",
-      createdAt: "2026-04-01T05:00:00Z",
-    },
-    {
-      id: "au-3",
-      actorName: "이심사",
-      action: "create_temporary",
-      entityType: "startup",
-      entityId: "st-temp",
-      reason: "Work 신청 유입 임시 마스터",
-      createdAt: "2026-07-01T02:00:00Z",
-    },
+    auditRow("au-1", "관리자(개발)", "merge", "startup", "st-1", "동일 대표자 및 유사명 확인", "2026-06-18T05:00:00Z"),
+    auditRow("au-2", "관리자(개발)", "update", "startup", "st-1", "법인 설립 정보 반영", "2026-04-01T05:00:00Z"),
+    auditRow("au-3", "이심사", "create_temporary", "startup", "st-temp", "Work 신청 유입 임시 마스터", "2026-07-01T02:00:00Z"),
+    auditRow("au-4", "관리자(개발)", "update", "expert", "ex-1", "소속 변경 확인", "2026-06-10T05:00:00Z"),
+    auditRow("au-5", "관리자(개발)", "update", "partner", "pt-2", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z"),
   ];
 
   return {
-    startups,
-    experts,
-    partners,
+    startups: seedStartups(),
+    experts: seedExperts(),
+    partners: seedPartners(),
     identifiers,
     aliases,
     fieldHistory,
@@ -348,6 +147,8 @@ export function seedState(): MockState {
     importBatches,
     audit,
     startupSeq: 92,
+    expertSeq: 9,
+    partnerSeq: 44,
     auditSeq: 100,
     idSeq: 100,
   };
@@ -388,4 +189,41 @@ function alias(
     sourceDomain: "hub",
     createdAt: "2026-04-01T05:00:00Z",
   };
+}
+
+function history(
+  id: string,
+  entityId: string,
+  fieldName: string,
+  oldValue: string | null,
+  newValue: string | null,
+  changeReason: string,
+  changedAt: string,
+): FieldHistoryEntry & { entityId: string } {
+  return { id, entityId, fieldName, oldValue, newValue, changeReason, changedBy: "관리자(개발)", changedAt };
+}
+
+function candidate(
+  id: string,
+  entityType: MergeCandidateRow["entityType"],
+  sourceId: string,
+  targetId: string,
+  score: number,
+  reasons: string[],
+  status: string,
+  createdAt: string,
+): MergeCandidateRow {
+  return { id, entityType, sourceId, targetId, score, reasons, status, createdAt };
+}
+
+function auditRow(
+  id: string,
+  actorName: string,
+  action: string,
+  entityType: string,
+  entityId: string,
+  reason: string,
+  createdAt: string,
+): AuditEntry {
+  return { id, actorName, action, entityType, entityId, reason, createdAt };
 }

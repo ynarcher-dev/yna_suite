@@ -9,9 +9,19 @@ import {
   mockRecentMergeEvents,
   mockSearchMasters,
 } from "./mock-store";
+import {
+  mockGetExpertDetail,
+  mockGetPartnerDetail,
+  mockListExperts,
+  mockListPartners,
+} from "./mock-masters";
 import type {
   DashboardCounts,
+  ExpertDetail,
+  ExpertMaster,
   MasterSearchResult,
+  PartnerDetail,
+  PartnerMaster,
   RecentImportBatch,
   RecentMergeEvent,
   StartupDetail,
@@ -42,6 +52,26 @@ export async function listStartups(): Promise<StartupMaster[]> {
 export async function getStartupDetail(id: string): Promise<StartupDetail | null> {
   ensureFallback();
   return mockGetStartupDetail(id);
+}
+
+export async function listExperts(): Promise<ExpertMaster[]> {
+  ensureFallback();
+  return mockListExperts();
+}
+
+export async function getExpertDetail(id: string): Promise<ExpertDetail | null> {
+  ensureFallback();
+  return mockGetExpertDetail(id);
+}
+
+export async function listPartners(): Promise<PartnerMaster[]> {
+  ensureFallback();
+  return mockListPartners();
+}
+
+export async function getPartnerDetail(id: string): Promise<PartnerDetail | null> {
+  ensureFallback();
+  return mockGetPartnerDetail(id);
 }
 
 export async function searchMasters(args: {

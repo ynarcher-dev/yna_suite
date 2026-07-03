@@ -42,6 +42,8 @@ const IDENTIFIER_LABEL: Record<string, string> = {
   corporation_number: "법인등록번호",
   founder_phone: "대표 연락처",
   founder_email: "대표 이메일",
+  email: "이메일",
+  phone: "연락처",
   website_domain: "웹사이트 도메인",
   external_id: "외부 시스템 ID",
 };
@@ -50,7 +52,43 @@ export function identifierLabel(type: string): string {
   return IDENTIFIER_LABEL[type] ?? type;
 }
 
-export const IDENTIFIER_TYPES = Object.keys(IDENTIFIER_LABEL);
+/** 스타트업 식별자 유형(추가 dialog 옵션). */
+export const IDENTIFIER_TYPES = [
+  "business_number",
+  "corporation_number",
+  "founder_phone",
+  "founder_email",
+  "website_domain",
+  "external_id",
+];
+
+/** 전문가 연락처 식별자 유형. (functional_spec §8) */
+export const EXPERT_IDENTIFIER_TYPES = ["email", "phone", "external_id"];
+
+/** 협력사 식별자 유형. (functional_spec §9 — 사업자번호 강하게 반영) */
+export const PARTNER_IDENTIFIER_TYPES = [
+  "business_number",
+  "founder_phone",
+  "founder_email",
+  "website_domain",
+  "external_id",
+];
+
+const PARTNER_TYPE_LABEL: Record<string, string> = {
+  lp: "LP",
+  advisor: "자문사",
+  operator: "수행기관",
+  consortium: "컨소시엄 파트너",
+  institution: "기관",
+  other: "기타",
+};
+
+export function partnerTypeLabel(type: string | null): string {
+  if (!type) return "—";
+  return PARTNER_TYPE_LABEL[type] ?? type;
+}
+
+export const PARTNER_TYPES = Object.keys(PARTNER_TYPE_LABEL);
 
 const ALIAS_LABEL: Record<string, string> = {
   previous_name: "과거명",
@@ -83,7 +121,14 @@ export function auditActionLabel(action: string): string {
 
 /** 민감 식별자(사업자/법인/전화/이메일) 여부 — 목록/요약 마스킹 대상. */
 export function isSensitiveIdentifier(type: string): boolean {
-  return type === "business_number" || type === "corporation_number" || type === "founder_phone" || type === "founder_email";
+  return (
+    type === "business_number" ||
+    type === "corporation_number" ||
+    type === "founder_phone" ||
+    type === "founder_email" ||
+    type === "phone" ||
+    type === "email"
+  );
 }
 
 /** ISO 문자열을 YYYY-MM-DD 로. */

@@ -7,7 +7,7 @@ import type { ActionResult } from "@/lib/hub-data/types";
 
 /**
  * 식별자/별칭처럼 (유형 + 값 + 사유) 구조를 공유하는 추가 dialog.
- * (근거: functional_spec §7 식별자/별칭 추가, api_contracts §10~11)
+ * 스타트업/전문가/협력사 상세에서 공용으로 사용한다. (근거: functional_spec §7~9, api_contracts §10~11)
  */
 export function MasterAddDialog({
   open,
