@@ -47,6 +47,30 @@
 
 ---
 
+## 1-2. 스캐폴딩 메모 (Phase 1.1, 2026-07-03)
+
+### 📌 이슈 08: 내부 패키지 빌드 방식 — TS 소스 직접 export + transpilePackages (작성일자: 2026-07-03)
+*   **상황**: `packages/*` 공통 패키지를 앱에서 쓰려면 보통 각 패키지를 `tsc`로 빌드해 `dist`를 export해야 함.
+*   **문제**: 패키지마다 빌드 스텝을 두면 watch/캐시/순서 관리가 복잡해지고, 초기 스캐폴딩 단계에서 과함.
+*   **해결**: 각 패키지 `package.json`의 `exports`를 `./src/index.ts`(소스)로 두고, 앱(`next.config.mjs`)의 `transpilePackages`에 `@yna/*`를 등록해 Next가 직접 트랜스파일하도록 함. 패키지엔 build 스크립트가 없고 typecheck는 `tsc --noEmit`으로만 검증. (근거: yna_suite_foldering.md §7)
+
+### 📌 이슈 09: 의존성 스택 일부 이연 — 미사용 라이브러리 금지 규칙 준수 (작성일자: 2026-07-03)
+*   **상황**: 스택 문서(tech_stack.md)는 Tailwind/shadcn/RHF/Zod/TanStack Query·Table/Recharts/Vitest/Playwright를 1차 스택으로 명시.
+*   **문제**: 공통 게이트의 "새 라이브러리 추가 검토(사용처 확인)" 및 유지보수 규칙상 실제 사용처 없는 의존성을 미리 설치하면 안 됨.
+*   **해결**: 이번엔 실행에 필요한 기반만 설치(Next 15, React 19, Tailwind v3.4, TanStack Query, Zod, Supabase client, Vitest). shadcn 컴포넌트 본체·RHF·TanStack Table·Recharts·Playwright는 실제 화면/기능이 생기는 Phase 1.2+에서 추가. Tailwind는 v4 대신 안정적인 **v3.4** 채택.
+
+### 📌 이슈 10: turbo가 pnpm 바이너리를 못 찾는 문제 (작성일자: 2026-07-03)
+*   **상황**: 이슈 06대로 pnpm 전역 shim이 없어 `corepack pnpm`으로 실행. 그런데 `corepack pnpm build`(=`turbo run ...`) 시 turbo가 "cannot find binary path"로 실패.
+*   **문제**: turbo는 각 패키지 task를 실행하려고 PATH에서 `pnpm`을 찾는데, 전역 shim이 없어 못 찾음.
+*   **해결**: 이미 PATH·쓰기 가능한 `%APPDATA%\npm`에 corepack shim 설치 — `corepack enable --install-directory "C:\Users\Admin\AppData\Roaming\npm" pnpm`. 이후 turbo 정상 동작. (새 기기 온보딩 시 동일 조치 필요할 수 있음. README/이슈 06과 함께 참고.)
+
+### 📌 이슈 11: ESLint 단일 루트 flat config로 의존성 방향 강제 (작성일자: 2026-07-03)
+*   **상황**: 앱/패키지마다 eslint를 설치·설정하면 중복이 크고, 앱은 `next lint` flat-config 연동이 번거로움.
+*   **문제**: 의존성 방향 규칙(앱 간 import 금지, ui의 비즈니스/API import 금지)을 일관되게 강제할 위치가 필요.
+*   **해결**: 루트 `eslint.config.mjs` 하나 + 경로별 override(`packages/ui/**`)로 `no-restricted-imports` 규칙을 둠. eslint는 루트에만 설치하고, pnpm이 워크스페이스 스크립트 실행 시 상위 `node_modules/.bin`을 PATH에 넣으므로 각 패키지 `eslint .`가 루트 바이너리·config를 사용. 앱 lint는 `next lint` 대신 `eslint .`로 통일하고 Next 빌드 린트는 `eslint.ignoreDuringBuilds`로 끔(중앙 관리).
+
+---
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

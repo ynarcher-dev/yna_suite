@@ -57,14 +57,14 @@ Phase 6: Y&A Management 연결
 
 Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fund/M&A/Project/Management가 같은 계약으로 붙을 수 있는 기반**을 실제로 검증하는 것입니다. 아래 순서는 권장 구현 순서이기도 합니다.
 
-### [ ] Phase 1.0 개발 환경 및 의존성 준비
+### [x] Phase 1.0 개발 환경 및 의존성 준비
 *(근거: yna_suite_tech_stack.md, yna_suite_environment_deployment.md, yna_suite_ci_cd_release_process.md, yna_suite_maintenance_rules.md §10)*
-> 진행: 루트 워크스페이스·도구 버전·환경 템플릿·스크립트·온보딩 문서 완료. 앱별 프레임워크 스택 설치와 Hub/Dev 실행·smoke는 Phase 1.1(앱 스캐폴딩) 이후 마무리. (2026-07-03)
+> 진행: 루트 워크스페이스·도구 버전·환경 템플릿·스크립트·온보딩 문서 완료. **앱별 프레임워크 스택 설치와 Hub/Dev 실행·smoke는 Phase 1.1에서 완료(2026-07-03).**
 
 *   **[x] 로컬 개발 도구 버전 고정**
     *   Node.js **24.16.0**(`.node-version`/`.nvmrc`), pnpm **11.9.0**(`packageManager`, Corepack), Supabase CLI 2.x, Git 기준을 고정하고 `engines`·`README.md` 온보딩에 반영.
-*   **[ ] 기본 라이브러리 설치 및 lockfile 확정**
-    *   (완료) 루트 공통 도구(Turborepo, TypeScript, Prettier, @types/node) 설치 + `pnpm-lock.yaml` 커밋. (이월) Next.js/React/Tailwind/shadcn/RHF/Zod/TanStack/Recharts/Vitest/Playwright/Supabase client 등 앱별 1차 스택은 Phase 1.1 앱 스캐폴딩 시 설치.
+*   **[x] 기본 라이브러리 설치 및 lockfile 확정**
+    *   루트 공통 도구(Turborepo, TypeScript, Prettier, ESLint) 설치 + `pnpm-lock.yaml` 커밋. Phase 1.1에서 Next.js 15/React 19/Tailwind v3.4/TanStack Query/Zod/Supabase client/Vitest 설치 완료. (shadcn 컴포넌트·RHF·TanStack Table·Recharts·Playwright는 실제 사용하는 Phase 1.2+로 이연 — 미사용 의존성 금지 규칙)
 *   **[x] 패키지별 의존성 경계 정리**
     *   `apps/* → packages/*` 방향 및 `packages/ui` 비즈니스 로직/API 금지, 동일 목적 라이브러리 중복 금지 기준을 `README.md`·`2_rules.md`에 문서화. (lint 자동 강제는 1.1 도구 도입 시)
 *   **[x] 로컬 Supabase 개발 환경 준비**
@@ -73,20 +73,21 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
     *   루트 `.env.example`과 `apps/hub|dev|work/.env.example` 작성, `NEXT_PUBLIC_` 공개값과 서버 전용 secret 분리. `.env.local` git 추적 해제 + `.gitignore` 보강.
 *   **[x] 개발/검증 스크립트 등록**
     *   `pnpm dev/lint/typecheck/test/build/e2e/format/db:migrate/db:reset`를 루트 `package.json` + `turbo.json` task로 등록.
-*   **[ ] 신규 개발자 재현성 확인**
-    *   (완료) 깨끗한 checkout에서 `pnpm install`(Corepack) → env 복사 → `lint`/`typecheck` 재현 확인. (이월) `Supabase local start/reset → Hub/Dev 실행 → smoke test`는 앱 스캐폴딩(1.1) 이후.
+*   **[x] 신규 개발자 재현성 확인**
+    *   깨끗한 checkout에서 `pnpm install`(Corepack) → env 복사 → `lint`/`typecheck`/`build` 재현 확인. Hub/Dev `next build` + 프로덕션 실행(HTTP 200) smoke 통과. (`Supabase local start/reset`는 Docker 미설치로 미검증 — 진행 기록 참고)
 
-### [ ] Phase 1.1 모노레포 및 공통 패키지 스캐폴딩
+### [x] Phase 1.1 모노레포 및 공통 패키지 스캐폴딩
 *(근거: yna_suite_tech_stack.md, yna_suite_foldering.md)*
+> 진행: hub/dev Next.js 15 앱 + 공통 패키지 8개 생성, 의존성 방향 lint 강제, typecheck/lint/test/build + 실행 smoke 통과. (2026-07-03)
 
-*   **[ ] 모노레포 뼈대 생성**
-    *   `pnpm workspace` + `Turborepo` 기반 루트 구성(`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`).
-*   **[ ] 배포 단위 앱 폴더 생성**
-    *   `apps/hub`, `apps/dev`를 우선 생성하고, `work/mna/project/fund/management`는 빈 뼈대만 준비.
-*   **[ ] 공통 패키지 뼈대 생성**
-    *   `packages/auth`(세션·로그인), `packages/permissions`(권한 판단), `packages/master-data`(마스터 검색·병합), `packages/database`(Supabase client·query helper), `packages/ui`(공통 UI), `packages/core`(타입·상수), `packages/config`(도메인·env), `packages/utils`(정규화·포맷).
-*   **[ ] 의존성 방향 규칙 적용**
-    *   `apps/* → packages/*`만 허용. 앱 간 직접 import 금지, `packages/ui`의 비즈니스 로직·API 호출 금지 규칙을 lint/리뷰 기준으로 반영.
+*   **[x] 모노레포 뼈대 생성**
+    *   `pnpm workspace` + `Turborepo` 기반 루트 구성(`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`). 내부 패키지는 TS 소스를 직접 export하고 앱에서 `transpilePackages`로 번들(별도 빌드 스텝 없음).
+*   **[x] 배포 단위 앱 폴더 생성**
+    *   `apps/hub`(3000), `apps/dev`(3001) Next.js 15 + React 19 App Router 앱 생성. `work/mna/project/fund/management`는 README placeholder 뼈대만(package.json 없어 워크스페이스 무시).
+*   **[x] 공통 패키지 뼈대 생성**
+    *   `@yna/auth`(세션·권한 claim), `@yna/permissions`(권한 판단 helper), `@yna/master-data`(검색 계약·병합 점수), `@yna/database`(Supabase client 팩토리), `@yna/ui`(cn·Button·Tailwind preset), `@yna/core`(도메인/권한 타입·상수), `@yna/config`(도메인·env 스키마), `@yna/utils`(정규화·마스킹). utils/permissions/master-data에 Vitest 단위 테스트 포함.
+*   **[x] 의존성 방향 규칙 적용**
+    *   루트 `eslint.config.mjs`(flat) + `no-restricted-imports`로 앱 간 직접 import 금지, `packages/ui`의 비즈니스/API/DB import 금지를 lint로 강제(음성 테스트로 규칙 동작 확인).
 
 ### [ ] Phase 1.2 공통 디자인 시스템 · UI · AppShell
 *(근거: yna_suite_design_system.md, yna_suite_information_architecture.md)*

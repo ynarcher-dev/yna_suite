@@ -30,6 +30,24 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.1 모노레포 및 공통 패키지 스캐폴딩
+*   **완료**:
+    *   **공통 패키지 8개 생성**(`packages/*`, 모두 `@yna/*` 내부 패키지, TS 소스 직접 export):
+        *   `core`(도메인/역할/스코프 상수, JWT 권한 claim 타입, Result/AppError), `utils`(회사명/사업자번호/전화/이메일/도메인 정규화 + 이메일/전화 마스킹), `config`(APP_CONFIGS 도메인 설정 + zod 공개/서버 env 스키마), `database`(Supabase browser/server client 팩토리 — cookie 어댑터 주입, next 비의존), `permissions`(canRead/canWrite/isExpired — can_write→can_read 강제·만료 즉시 차단), `auth`(Supabase User→권한 claim 추출), `master-data`(마스터 검색 계약 + 병합 점수 등급 95/80/60), `ui`(`cn`, Button, Tailwind preset).
+        *   Vitest 단위 테스트: utils(정규화 4) · permissions(권한 4) · master-data(점수 2) = 10 pass.
+    *   **앱 스캐폴딩**: `apps/hub`(포트 3000), `apps/dev`(포트 3001) Next.js 15 + React 19 App Router. TanStack Query Provider, Tailwind v3.4(+ ui preset), 홈 화면(공통 패키지 연결 확인용). `work/mna/project/fund/management`는 README placeholder만.
+    *   **패키지 트랜스파일 방식**: 앱 `next.config.mjs`의 `transpilePackages`로 `@yna/*` 소스 직접 번들(별도 빌드 스텝 없음).
+    *   **의존성 방향 lint**: 루트 `eslint.config.mjs`(flat, ESLint 9 + typescript-eslint) + `no-restricted-imports` — 앱 간 import 금지, `packages/ui`의 비즈니스/API/DB import 금지. 음성 테스트로 규칙 발화 확인.
+    *   루트 devDeps에 eslint 스택 추가, `pnpm-workspace.yaml`에 빌드 스크립트 허용(esbuild/sharp), `.gitignore`에 `next-env.d.ts` 추가.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 10 pass, `pnpm build`(hub/dev) 2/2 성공. hub 프로덕션 실행 후 `curl localhost:3000` **HTTP 200 + 공통 패키지 렌더 확인**.
+    *   **주의(이슈 10)**: turbo가 pnpm 바이너리를 못 찾던 문제 → `corepack enable --install-directory "%APPDATA%\npm" pnpm`으로 shim 설치 후 turbo 정상. 새 기기에서 동일 조치 필요할 수 있음.
+*   **다음 작업**: **Phase 1.2 공통 디자인 시스템 · UI · AppShell** — 디자인 토큰(그레이스케일 + CI Red) 정의, 핵심 공통 컴포넌트, 권한 기반 AppShell(Sidebar/Topbar), 공통 상태 화면. 이때 shadcn 컴포넌트·RHF·TanStack Table 등 필요한 라이브러리 추가.
+*   **주의점**:
+    *   미사용 의존성 금지 규칙에 따라 shadcn 컴포넌트 본체·RHF·TanStack Table·Recharts·Playwright는 아직 미설치(Phase 1.2+에서 사용 시 추가). Tailwind는 v3.4 채택.
+    *   `packages/database/src/types.ts`의 `Database`는 placeholder — Phase 1.3 스키마 생성 후 `supabase gen types`로 대체.
+    *   turbo test 실행 시 "no output files(coverage)" 경고는 무해(coverage 미생성).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.0 개발 환경 및 의존성 준비 (기반)
 *   **완료**:
     *   도구 버전 고정: `.node-version`/`.nvmrc`(Node 24.16.0), 루트 `package.json`의 `packageManager: pnpm@11.9.0` + `engines`, `.editorconfig`.
