@@ -113,7 +113,7 @@ export function StartupDetailView({ detail }: { detail: StartupDetail }) {
 
       <IdentifiersSection identifiers={detail.identifiers} canWrite={canEdit} onAdd={() => setIdOpen(true)} />
       <AliasesSection aliases={detail.aliases} canWrite={canEdit} onAdd={() => setAliasOpen(true)} />
-      <MergeCandidatesSection candidates={detail.mergeCandidates} basePath="/startups" />
+      <MergeCandidatesSection candidates={detail.mergeCandidates} />
       <FieldHistorySection history={detail.fieldHistory} />
       <RelatedWorkSection related={detail.relatedWork} />
       <AuditSummarySection audit={detail.auditSummary} />

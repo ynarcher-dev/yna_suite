@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.10 중복 후보 · 수동 병합
+*   **완료**:
+    *   **순수 병합 로직**(`@yna/master-data/merge/resolve.ts`): `resolveMergeField`/`resolveMergeFields`(정책 target/source/source_if_verified/prefer_filled/union), `detectMergeWarnings`(사업자/법인/대표자/이메일/전화/도메인 상충), `hasBlockingConflict`(강한 식별자 충돌=승인 차단). 단위 테스트 9개(master-data 총 17). §13 후보 점수·`generateCandidates`(1.8)는 그대로 재사용.
+    *   **resolved view/helper**(정책 §10.3): `@yna/database/resolve.ts`(`resolveMasterId`=COALESCE(merged_into_id,id), `isMerged`, `RESOLVED_MASTER_VIEW`) + 마이그레이션 `20260703190001_create_resolved_master_views.sql`(`hub.resolved_startups/experts/partners` — 업무 도메인이 COALESCE 반복 없이 최종 마스터 resolve). SQL 오프라인 파서 6 stmts pass.
+    *   **hub-data 병합 계층**: `types.ts`(MergeCandidateListItem/Detail·MergeEntitySnapshot·MergeFieldResolutionRow·MergePreview·MergeEventRow·MergeApprove*). `merge-fields.ts`(엔티티별 §14 필드 정책 + fieldToString/applyFieldValue). `mock-merge.ts`(목록/상세/미리보기 + 승인 트랜잭션[대표값 승계·source 식별자/별칭/이름 alias 보존·source merged+merged_into_id·merge_event·audit] + 반려/무시/보류). `mock-seed`·`mock-temporary`(comparableOf/listOf export) 소폭 보강.
+    *   **공통 API §12~15**: `service.ts`(list/get/preview/approve/reject/ignore/hold), `service-merge.ts`(ApiError 매핑), `api-map.ts`(후보/스냅샷/미리보기 snake_case 투영 + field_policy 파서), `guard.ts`(`requireMergeAccess`=hub write, RLS `can_merge_master` 최종 강제). 라우트 7종: `GET /merge-candidates`(+entity_type/status/min_score), `GET /merge-candidates/{id}`, `POST .../preview`, `POST .../approve`, `POST .../reject`, `POST .../ignore`.
+    *   **서버 액션 + UI**: `actions-merge.ts`(approve/reject/ignore/hold — guard·actor·revalidate). 화면 `(app)/merge-candidates`(목록·필터) + `[id]`(검토). 컴포넌트 `components/merge/`(merge-candidates-table·merge-candidate-detail-view·compare-panel[좌우 비교·경고·대표값 미리보기]·merge-action-dialog[사유 dialog]). 마스터 상세의 `MergeCandidatesSection` 링크를 검토 화면(`/merge-candidates/{id}`)으로 전환(basePath prop 제거, 3개 상세 뷰 갱신). nav 는 기존 `/merge-candidates` 항목 그대로.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 master-data 17(resolve 9 신규)·permissions 29·utils 12 pass, `pnpm build`(hub/dev) 2/2(병합 API 7개 ƒ dynamic + 목록/상세 페이지 등록). **hub 프로덕션 smoke**: 목록 `/merge-candidates` 200·상세 `/merge-candidates/mc-1`·`mc-3` 200·없는 후보 404, `GET /api/hub/merge-candidates` 200(pt-temp→pt-2 96·st-temp→st-1 86), 필터(status=pending→[mc-3,mc-1]·entity_type=startup→[mc-1,mc-2]·min_score=95→[mc-3]), 상세 API(field_resolution 변경필드·warnings `email_conflict` non-blocking), preview(affected 0·blocked false), 승인 `POST .../mc-3/approve` 200(target pt-2·event me-2·sync_status completed → source pt-temp `merged`/target `active`)·재승인 409·사유누락 400·ignore 사유누락 400.
+    *   **미검증(이슈27)**: Docker 미설치로 실제 hub RPC(`approve_merge_candidate`)·RLS(`can_merge_master`)·resolved view 적용·타 도메인 FK 비동기 워커는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류).
+*   **다음 작업**: **Phase 1.11 감사 로그** — `hub.audit_logs`/`dev.permission_audit_logs` 조회 화면(actor·domain·entity·action·before/after·reason·request_id), 로그 수정/삭제 불가·개인정보 원문 payload 저장 금지. (1.5~1.10 에서 각 변경이 이미 audit 를 남기고 있으므로, 1.11 은 전용 조회 화면·불변성·payload 정책을 채운다.)
+*   **주의점**:
+    *   병합 승인은 **정책 §10.3 혼합형** — 1단계에서 source.status='merged'+merged_into_id 만 확정, 2단계에서 타 도메인 FK 를 백그라운드로. Phase 1 은 업무 도메인 앱이 없어 affected_records=0·즉시 completed. Work 연결(1.13/Phase 2)에서 실제 FK 반영 워커 + `hub.resolved_*` view 로 실시간 resolve 한다.
+    *   병합 액션 **이중 진입점**: 승인/반려/무시는 HTTP 계약(§14~15) + 서버 액션 둘 다, **보류(hold)는 서버 액션 전용**(§15 는 HTTP 로 reject/ignore 만 정의). 둘 다 같은 `mock-merge` mutation 으로 수렴 — Docker/staging 연결 시 mutation 만 hub RPC 로 교체(이슈21·25·26 seam 연장).
+    *   대표값 정책(`merge-fields.ts`)은 §14 해석 — 이름/대표자/연락처는 잔존(target) 우선, 사업자/법인/홈페이지/주소는 채워진 값 우선(prefer_filled), 산업/전문분야는 union. 밀려난 source 이름은 previous_name alias, source 식별자/별칭은 target 으로 승계(중복 제외).
+    *   포트 3000 stale 서버 남으면 smoke 전 종료(이전 handoff 동일).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.9 식별자 · 별칭 · 필드 이력
 *   **완료**:
     *   **데이터 모델 보강**(`hub-data/types.ts`): `MasterIdentifier.verifiedStatus`(unverified/verified/rejected), `FieldHistoryEntry.sourceDomain`, `ActionResult.value`(reveal 반환) 추가. DB 컬럼(`master_identifiers.verified_status`·`master_field_history.source_domain`·`master_aliases.source_domain`)은 1.3 마이그레이션(`171003`)에 이미 존재 → 스키마 변경 없음.

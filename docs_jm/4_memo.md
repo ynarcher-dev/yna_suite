@@ -173,6 +173,18 @@
     *   **원본 조회 audit**: 상세 "원본 보기"는 `revealIdentifierAction` → `view_sensitive` audit 를 남기고, 클라이언트가 이미 보유한 원본을 노출한다(마스킹은 UX, 최종 보안은 RLS — 이슈23 방침 동일). 실데이터 연결 시 원본 반환 endpoint 를 권한·마스킹과 함께 서버에서 강제한다.
     *   **스키마 변경 없음**: `verified_status`(master_identifiers)·`source_domain`(master_field_history/master_aliases)은 1.3 마이그레이션(`171003`)에 이미 존재 → 타입/시드/UI 로만 표면화. 새 migration 불필요.
 
+## 1-10. 중복 후보·수동 병합 메모 (Phase 1.10, 2026-07-03)
+
+### 📌 이슈 27: 수동 병합 2단계 반영·이중 진입점·resolved view (작성일자: 2026-07-03)
+*   **상황**: Phase 1.10 은 중복 후보 목록/상세 비교, 병합 미리보기(`.../preview`), 수동 승인/반려/무시/보류, 2단계 비동기 병합 반영(정책 §10.3, api_contracts §12~15)을 요구한다. 후보 자동 생성(§13)은 1.8 에서 이미 구현됨.
+*   **문제**: (1) 실제 병합 RPC(`approve_merge_candidate`)·RLS(`can_merge_master`)·타 도메인 FK 워커는 Docker 미설치로 붙일 수 없다(이슈15·21). (2) 업무 도메인 앱이 아직 없어 병합이 옮길 FK(affected_records)가 0건이다 — "2단계 비동기"를 어떻게 의미 있게 구현하는지. (3) UI 편의(사유 dialog·revalidate·승인 후 이동)와 크로스앱 계약(HTTP)을 어떻게 함께 두는지.
+*   **해결**:
+    *   **2단계 병합, Phase 1 즉시 완료**: 승인 시 1단계(동기)에서 `source.status='merged'`+`merged_into_id`+대표값 승계(§14)+밀려난 값 보존(source 이름→previous_name alias, source 식별자/별칭→target 승계)+`merge_event`+audit 를 확정한다. 2단계(비동기 FK)는 업무 도메인 앱이 없어 affected_records=0 → `sync_status='completed'` 로 즉시 종료. Work 연결(1.13/Phase 2)에서 affected>0 이면 `pending` + 백그라운드 워커로 전환된다. 조회 정합은 `packages/database` 의 `resolveMasterId`(COALESCE(merged_into_id,id)) helper + `hub.resolved_startups/experts/partners` view(마이그레이션 `190001`)로 표준화 — 업무 도메인은 hub 마스터 직접 조인 + 개별 COALESCE 를 쓰지 않는다.
+    *   **이중 진입점, 단일 mutation**: 승인/반려/무시는 **HTTP 계약**(`service-merge.ts`, §14~15)과 **서버 액션**(`actions-merge.ts`, 사유 dialog·revalidate) 둘 다 제공하고, **보류(hold)는 서버 액션 전용**(§15 는 HTTP 로 reject/ignore 만 정의). 둘 다 같은 `mock-merge` mutation 으로 수렴한다(이슈26 방침 연장). Docker/staging 연결 시 mutation 만 hub RPC 로 교체.
+    *   **순수 병합 로직 분리**: 대표값 결정(`resolveMergeField`/`resolveMergeFields`)과 충돌 경고(`detectMergeWarnings`/`hasBlockingConflict`)는 `@yna/master-data`(순수·테스트 9)에 두고, 엔티티별 필드/정책 매핑(`merge-fields.ts`)과 스토어 트랜잭션(`mock-merge.ts`)은 hub-data 에 둔다. 강한 식별자(사업자/법인번호) 충돌은 승인을 차단(blocked)하지만, 후보 생성 단계에서 이미 충돌은 제외되므로 방어적 가드다.
+    *   **병합 권한**: 정책 §17 "hub write + master_data_merge 또는 master role" 중, 현재 세션 모델은 도메인 read/write 만 담아 `requireMergeAccess`=hub write 로 확인하고, 세분 권한(master_data_merge)은 실데이터 연결 시 RLS `dev.can_merge_master` 가 최종 강제한다(UI/API 는 UX, 최종 보안은 RLS — 일관 방침).
+    *   **마스터 상세 연결**: 스타트업/전문가/협력사 상세의 중복후보 섹션 링크를 반대편 마스터가 아니라 **검토 화면**(`/merge-candidates/{id}`)으로 바꿔 병합 흐름의 단일 진입점을 만들었다(`MergeCandidatesSection` basePath prop 제거).
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

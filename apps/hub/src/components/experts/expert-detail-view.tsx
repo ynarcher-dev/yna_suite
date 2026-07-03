@@ -136,7 +136,7 @@ export function ExpertDetailView({ detail }: { detail: ExpertDetail }) {
       <FieldHistorySection history={detail.fieldHistory} />
       <RelatedWorkSection related={detail.relatedWork} title="관련 평가/멘토링 요약" />
       <AliasesSection aliases={detail.aliases} canWrite={canEdit} onAdd={() => setAliasOpen(true)} />
-      <MergeCandidatesSection candidates={detail.mergeCandidates} basePath="/experts" />
+      <MergeCandidatesSection candidates={detail.mergeCandidates} />
       <AuditSummarySection audit={detail.auditSummary} />
 
       <MasterEditDialog

@@ -6,9 +6,9 @@ import type {
   FieldHistoryEntry,
   MasterAlias,
   MasterIdentifier,
+  MergeEventRow,
   PartnerMaster,
   RecentImportBatch,
-  RecentMergeEvent,
   StartupMaster,
 } from "./types";
 
@@ -38,13 +38,14 @@ export interface MockState {
   aliases: (MasterAlias & { entityId: string })[];
   fieldHistory: (FieldHistoryEntry & { entityId: string })[];
   mergeCandidates: MergeCandidateRow[];
-  mergeEvents: RecentMergeEvent[];
+  mergeEvents: MergeEventRow[];
   importBatches: RecentImportBatch[];
   audit: AuditEntry[];
   startupSeq: number;
   expertSeq: number;
   partnerSeq: number;
   auditSeq: number;
+  mergeSeq: number;
   idSeq: number;
 }
 
@@ -92,14 +93,17 @@ export function seedState(): MockState {
     ], "pending", "2026-06-29T02:05:00Z"),
   ];
 
-  const mergeEvents: RecentMergeEvent[] = [
+  const mergeEvents: MergeEventRow[] = [
     {
       id: "me-1",
       entityType: "startup",
+      sourceId: "st-old",
       sourceName: "알파테크(구)",
       targetId: "st-1",
       targetName: "알파테크",
       syncStatus: "completed",
+      reason: "동일 대표자 및 유사명 확인",
+      affectedCount: 0,
       createdAt: "2026-06-18T05:00:00Z",
     },
   ];
@@ -150,6 +154,7 @@ export function seedState(): MockState {
     expertSeq: 9,
     partnerSeq: 44,
     auditSeq: 100,
+    mergeSeq: 1,
     idSeq: 100,
   };
 }

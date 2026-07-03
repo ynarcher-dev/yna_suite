@@ -20,3 +20,13 @@ export async function requireHubAccess(mode: "read" | "write"): Promise<AppSessi
   }
   return session;
 }
+
+/**
+ * 마스터 병합 권한 가드. (근거: master_data_policy §17, api_contracts §12~15)
+ * 병합은 "hub write + master_data_merge 권한 또는 master role" 이 필요하다.
+ * 현재 세션 모델은 도메인 read/write 만 담고 세분 권한은 RLS(`dev.can_merge_master`)가 최종 강제하므로,
+ * API 계층에서는 hub write 를 필수로 확인한다(실데이터 연결 시 RLS 로 master_data_merge 를 강제).
+ */
+export async function requireMergeAccess(): Promise<AppSession> {
+  return requireHubAccess("write");
+}

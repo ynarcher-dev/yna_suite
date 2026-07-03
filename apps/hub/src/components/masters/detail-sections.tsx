@@ -96,13 +96,7 @@ export function AliasesSection({
   );
 }
 
-export function MergeCandidatesSection({
-  candidates,
-  basePath,
-}: {
-  candidates: MergeCandidateSummary[];
-  basePath: string;
-}) {
+export function MergeCandidatesSection({ candidates }: { candidates: MergeCandidateSummary[] }) {
   return (
     <section className="flex flex-col gap-3">
       <SectionHead title="중복 후보" />
@@ -115,7 +109,7 @@ export function MergeCandidatesSection({
             return (
               <li key={c.id}>
                 <Link
-                  href={`${basePath}/${c.otherId}`}
+                  href={`/merge-candidates/${c.id}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300"
                 >
                   <div className="min-w-0">

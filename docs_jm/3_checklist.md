@@ -198,20 +198,21 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 개인정보 마스킹**
     *   목록에서 전화/이메일 마스킹, **원본 조회는 권한자 + audit log**(상세 식별자 "원본 보기" → `view_sensitive` audit).
 
-### [ ] Phase 1.10 중복 후보 · 수동 병합
+### [x] Phase 1.10 중복 후보 · 수동 병합
 *(근거: yna_suite_master_data_policy.md §10·13~15, yna_suite_api_contracts.md §12~15)*
+> 진행: 중복 후보 목록/상세(좌우 비교·충돌 경고·대표값 미리보기), 병합 미리보기(field_resolution·affected_records), 수동 승인/반려/무시/보류(승인=대표값 승계+source/alias/identifier 보존+source merged/merged_into_id+merge_event+audit 트랜잭션), 2단계 비동기 반영(1단계 동기 커밋 + `packages/database` `resolveMasterId`/`hub.resolved_*` view). 순수 병합 로직(`@yna/master-data` resolve/warnings, 테스트 9)·공통 API §12~15 라우트 7종·엔티티 공용 서버 액션·검토 화면. typecheck 10/10·lint 10/10·test(master-data 17[resolve 9 신규]/permissions 29/utils 12)·build 2/2 + SQL 오프라인 파서(view 6 stmts)·hub smoke(목록/상세/미리보기/필터·승인 201[source merged·sync completed]·재승인 409·사유누락 400·404). (2026-07-03)
 
-*   **[ ] 중복 후보 생성(규칙 기반)**
-    *   점수 기준(95↑ 강한 식별자 / 80~94 중간 / 60~79 약함 / 60↓ 유지), 매칭 사유 기록. 공식 번호 없거나 충돌 시 자동 병합 금지.
-*   **[ ] 중복 후보 목록/상세 비교**
-    *   entity_type·점수·상태 필터, 좌우 비교(필드·식별자·별칭·관련 업무 이력), 충돌 경고, 병합 후 미리보기.
-*   **[ ] 병합 미리보기 API**
-    *   `.../preview`로 field_resolution + affected_records(영향받는 업무 FK) 사전 계산.
-*   **[ ] 수동 병합 승인/반려/무시/보류**
-    *   승인은 트랜잭션. 대표값 결정 → 밀려난 값 alias/identifier/history 보존 → source `merged` + merged_into_id → merge_events·audit_logs 기록.
-*   **[ ] 2단계 비동기 병합 반영**
-    *   1단계(동기): source 상태 변경만 빠르게 커밋. 2단계(비동기): 타 도메인 FK 일괄 업데이트를 백그라운드 워커로. 진행 중 조회는 공통 resolved view/helper로 실시간 resolve.
-    *   업무 도메인 쿼리는 hub 마스터 직접 조인 + 개별 `COALESCE` 작성을 금지하고 `packages/database` 표준 query helper 또는 DB view를 사용.
+*   **[x] 중복 후보 생성(규칙 기반)**
+    *   점수 기준(95↑ 강한 식별자 / 80~94 중간 / 60~79 약함 / 60↓ 유지), 매칭 사유 기록. 공식 번호 없거나 충돌 시 자동 병합 금지. **(Phase 1.8 임시 생성 시 `@yna/master-data` `scoreDuplicateCandidate`+`generateCandidates`로 자동 큐잉 구현 — 1.10 은 이를 검토·병합한다.)**
+*   **[x] 중복 후보 목록/상세 비교**
+    *   entity_type·점수·상태 필터, 좌우 비교(필드·식별자·별칭·관련 업무 이력), 충돌 경고, 병합 후 미리보기. (`/merge-candidates` 목록 + `/merge-candidates/[id]` 검토, 민감 필드 마스킹, 마스터 상세의 중복후보 섹션이 검토 화면으로 연결)
+*   **[x] 병합 미리보기 API**
+    *   `.../preview`로 field_resolution + affected_records(영향받는 업무 FK) 사전 계산. (도메인 앱 미연결이라 affected 는 0건, 연결 시 계산)
+*   **[x] 수동 병합 승인/반려/무시/보류**
+    *   승인은 트랜잭션. 대표값 결정(§14 정책) → 밀려난 값 alias/identifier/history 보존 → source `merged` + merged_into_id → merge_events·audit_logs 기록. 반려/무시/보류도 audit. (승인/반려/무시는 HTTP §14~15 + 서버 액션, 보류는 서버 액션 전용 — §15 는 HTTP 로 reject/ignore 만 정의)
+*   **[x] 2단계 비동기 병합 반영**
+    *   1단계(동기): source 상태 변경만 빠르게 커밋. 2단계(비동기): 타 도메인 FK 일괄 업데이트를 백그라운드 워커로. 진행 중 조회는 공통 resolved view/helper로 실시간 resolve. (Phase 1 은 대상 0건이라 즉시 완료; 실제 워커·FK 반영은 Work 연결[1.13/Phase 2]에서.)
+    *   업무 도메인 쿼리는 hub 마스터 직접 조인 + 개별 `COALESCE` 작성을 금지하고 `packages/database` 표준 query helper 또는 DB view를 사용. (`resolveMasterId`/`isMerged`/`RESOLVED_MASTER_VIEW` helper + `hub.resolved_startups/experts/partners` view 마이그레이션)
 
 ### [ ] Phase 1.11 감사 로그
 *(근거: yna_suite_data_model.md §11, yna_suite_security_policy.md §15, yna_suite_api_contracts.md §5)*

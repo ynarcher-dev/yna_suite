@@ -4,6 +4,10 @@ import type {
   MasterAlias,
   MasterIdentifier,
   MasterSearchApiItem,
+  MergeCandidateListItem,
+  MergeEntityRef,
+  MergeEntitySnapshot,
+  MergePreview,
   TemporaryMasterInput,
   TemporaryMasterResult,
 } from "./types";
@@ -113,6 +117,96 @@ export function toAliasApiData(row: MasterAlias) {
     source_domain: row.sourceDomain,
     created_at: row.createdAt,
   };
+}
+
+// ---- merge candidate mapping (api_contracts §12~15) ----
+
+function refApi(ref: MergeEntityRef) {
+  return {
+    id: ref.id,
+    master_code: ref.masterCode,
+    name: ref.name,
+    verification_status: ref.verificationStatus,
+    status: ref.status,
+  };
+}
+
+/** 병합 후보 목록 항목을 API(snake_case) 형태로 투영한다. (api_contracts §12) */
+export function toMergeCandidateApiItem(item: MergeCandidateListItem) {
+  return {
+    id: item.id,
+    entity_type: item.entityType,
+    source_entity: refApi(item.source),
+    target_entity: refApi(item.target),
+    score: item.score,
+    reasons: item.reasons,
+    status: item.status,
+    created_at: item.createdAt,
+  };
+}
+
+function snapshotApi(s: MergeEntitySnapshot) {
+  return {
+    entity: refApi(s.ref),
+    fields: s.fields.map((f) => ({ key: f.key, label: f.label, value: f.value, sensitive: f.sensitive })),
+    identifiers: s.identifiers.map(toIdentifierApiData),
+    aliases: s.aliases.map(toAliasApiData),
+    related_work: s.relatedWork.map((r) => ({ label: r.label, count: r.count })),
+  };
+}
+
+/** 병합 미리보기를 API(snake_case) 형태로 투영한다. (api_contracts §13) */
+export function toMergePreviewApiData(preview: MergePreview) {
+  return {
+    source_entity_id: preview.sourceEntityId,
+    target_entity_id: preview.targetEntityId,
+    field_resolution: preview.fieldResolution.map((r) => ({
+      field: r.field,
+      label: r.label,
+      policy: r.policy,
+      source: r.source,
+      target: r.target,
+      selected: r.selected,
+    })),
+    affected_records: preview.affectedRecords,
+    warnings: preview.warnings,
+    blocked: preview.blocked,
+  };
+}
+
+/** 병합 후보 상세(좌우 비교 + 미리보기) API 투영. */
+export function toMergeCandidateDetailApiData(detail: {
+  id: string;
+  entityType: string;
+  score: number;
+  reasons: string[];
+  status: string;
+  createdAt: string;
+  source: MergeEntitySnapshot;
+  target: MergeEntitySnapshot;
+  preview: MergePreview;
+}) {
+  return {
+    id: detail.id,
+    entity_type: detail.entityType,
+    score: detail.score,
+    reasons: detail.reasons,
+    status: detail.status,
+    created_at: detail.createdAt,
+    source: snapshotApi(detail.source),
+    target: snapshotApi(detail.target),
+    preview: toMergePreviewApiData(detail.preview),
+  };
+}
+
+/** field_policy override(snake_case 필드 그대로 사용) 를 추출한다. */
+export function mapFieldPolicy(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 function mapPairs(

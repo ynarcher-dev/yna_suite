@@ -117,7 +117,7 @@ export function PartnerDetailView({ detail }: { detail: PartnerDetail }) {
 
       <IdentifiersSection identifiers={detail.identifiers} canWrite={canEdit} onAdd={() => setIdOpen(true)} />
       <AliasesSection aliases={detail.aliases} canWrite={canEdit} onAdd={() => setAliasOpen(true)} />
-      <MergeCandidatesSection candidates={detail.mergeCandidates} basePath="/partners" />
+      <MergeCandidatesSection candidates={detail.mergeCandidates} />
       <FieldHistorySection history={detail.fieldHistory} />
       <RelatedWorkSection
         related={detail.relatedWork}

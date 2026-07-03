@@ -381,6 +381,32 @@ source record는 status='merged'로 바꾸고 merged_into_id를 설정한다.
 DB 락 최소화를 위해, 타 도메인 스키마의 FK 업데이트는 sync_status 및 affected_records 필드를 기반으로 백그라운드 비동기 워커에서 실행한다.
 ```
 
+### 4.10 `hub.resolved_startups` / `hub.resolved_experts` / `hub.resolved_partners` (view)
+
+2단계 비동기 병합(정책 §10.3)에서 타 도메인 FK 반영이 진행 중이어도, 업무 도메인 조회가 항상 최종 마스터를 가리키도록 표준 resolve view 를 제공한다. (마이그레이션 `20260703190001_create_resolved_master_views.sql`)
+
+```sql
+CREATE OR REPLACE VIEW hub.resolved_startups AS
+SELECT
+    source.id                                  AS source_startup_id,   -- 업무 FK 가 참조 중인(병합 전) id
+    COALESCE(source.merged_into_id, source.id) AS resolved_startup_id, -- 조회 시 사용할 최종 마스터 id
+    target.master_code                         AS resolved_master_code,
+    target.name                                AS resolved_name,
+    target.status                              AS resolved_status
+FROM hub.startups source
+JOIN hub.startups target
+  ON target.id = COALESCE(source.merged_into_id, source.id);
+-- experts/partners 도 동형.
+```
+
+규칙:
+
+```txt
+업무 도메인 앱(work, fund, mna 등)은 hub 마스터를 직접 조인하며 COALESCE 를 반복 작성하지 않는다.
+이 view(또는 packages/database 의 resolveMasterId/isMerged/RESOLVED_MASTER_VIEW helper)를 경유해 source_id 와 resolved_id 를 함께 얻는다.
+COALESCE(merged_into_id, id) 는 view/helper 내부 구현으로 숨긴다.
+```
+
 ## 5. `dev` 스키마
 
 `dev`는 계정, 권한, 관리자 기능을 담당한다.

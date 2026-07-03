@@ -211,6 +211,125 @@ export interface RecentMergeEvent {
   createdAt: string;
 }
 
+/** 2단계 비동기 병합 반영 상태. (master_data_policy §10.3) */
+export type MergeSyncStatus = "pending" | "completed" | "failed";
+
+/** hub.merge_events 저장 레코드(대시보드 위젯은 RecentMergeEvent 로 투영). */
+export interface MergeEventRow extends RecentMergeEvent {
+  sourceId: string;
+  reason: string | null;
+  /** 비동기로 FK 를 갱신할 업무 레코드 수(현재 도메인 앱 미연결이라 0). */
+  affectedCount: number;
+}
+
+/** 병합 후보 상태. (api_contracts §12) */
+export type MergeCandidateStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "ignored"
+  | "on_hold"
+  | "expired";
+
+/** 병합 후보에서 참조하는 마스터 요약. */
+export interface MergeEntityRef {
+  id: string;
+  masterCode: string;
+  name: string;
+  verificationStatus: VerificationStatus;
+  status: MasterStatus;
+}
+
+/** 병합 후보 목록 항목(source=소멸 예정, target=잔존). (api_contracts §12) */
+export interface MergeCandidateListItem {
+  id: string;
+  entityType: EntityType;
+  source: MergeEntityRef;
+  target: MergeEntityRef;
+  score: number;
+  reasons: string[];
+  status: MergeCandidateStatus;
+  createdAt: string;
+}
+
+/** 좌우 비교용 마스터 스냅샷(필드 + 식별자 + 별칭 + 관련업무). */
+export interface MergeEntitySnapshot {
+  ref: MergeEntityRef;
+  fields: { key: string; label: string; value: string | null; sensitive: boolean }[];
+  identifiers: MasterIdentifier[];
+  aliases: MasterAlias[];
+  relatedWork: { label: string; count: number }[];
+}
+
+/** 병합 미리보기 필드별 대표값. (api_contracts §13 field_resolution) */
+export interface MergeFieldResolutionRow {
+  field: string;
+  label: string;
+  policy: string;
+  source: string | null;
+  target: string | null;
+  selected: string | null;
+}
+
+/** 병합 미리보기 영향 업무 레코드. (api_contracts §13 affected_records) */
+export interface MergeAffectedRecord {
+  table: string;
+  recordId: string;
+  field: string;
+  before: string;
+  after: string;
+}
+
+/** 병합 미리보기 결과. (api_contracts §13) */
+export interface MergePreview {
+  sourceEntityId: string;
+  targetEntityId: string;
+  fieldResolution: MergeFieldResolutionRow[];
+  affectedRecords: MergeAffectedRecord[];
+  warnings: string[];
+  /** 강한 식별자 충돌로 승인이 막히는지. */
+  blocked: boolean;
+}
+
+/** 병합 후보 상세(좌우 비교 + 미리보기). (functional_spec §15) */
+export interface MergeCandidateDetail {
+  id: string;
+  entityType: EntityType;
+  score: number;
+  reasons: string[];
+  status: MergeCandidateStatus;
+  createdAt: string;
+  source: MergeEntitySnapshot;
+  target: MergeEntitySnapshot;
+  preview: MergePreview;
+}
+
+/** 병합 후보 목록 필터. */
+export interface MergeCandidateFilter {
+  entityType?: EntityType | "all";
+  status?: MergeCandidateStatus | "all";
+  minScore?: number;
+}
+
+/** 병합 승인 입력(필드 정책 override + 사유). */
+export interface MergeApproveInput {
+  /** 필드별 대표값 정책 override(미지정 필드는 기본 정책). */
+  fieldPolicy?: Record<string, string>;
+  reason: string;
+}
+
+/** 병합 승인 결과. */
+export interface MergeApproveResult {
+  ok: boolean;
+  error?: string;
+  /** 잔존(최종) 마스터 id — 승인 후 이동 대상. */
+  targetId?: string;
+  /** 생성된 merge_event id. */
+  eventId?: string;
+  /** 비동기 FK 반영 상태. */
+  syncStatus?: MergeSyncStatus;
+}
+
 /** 대시보드 최근 import batch. */
 export interface RecentImportBatch {
   id: string;

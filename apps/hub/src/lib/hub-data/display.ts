@@ -1,7 +1,13 @@
 import type { EntityType } from "@yna/core";
 import type { StatusTone } from "@yna/ui";
 import { maskBusinessNumber, maskEmail, maskPhone } from "@yna/utils";
-import type { IdentifierVerifiedStatus, MasterStatus, VerificationStatus } from "./types";
+import type {
+  IdentifierVerifiedStatus,
+  MasterStatus,
+  MergeCandidateStatus,
+  MergeSyncStatus,
+  VerificationStatus,
+} from "./types";
 
 /**
  * Hub 화면 표시용 라벨/포맷 헬퍼(순수). 서버·클라이언트 공용.
@@ -139,7 +145,68 @@ const ACTION_LABEL: Record<string, string> = {
   view_sensitive: "민감정보 원본 조회",
   set_status: "상태 변경",
   merge: "병합",
+  reject_merge: "병합 반려",
+  ignore_merge: "병합 무시",
+  hold_merge: "병합 보류",
 };
+
+const MERGE_STATUS_META: Record<MergeCandidateStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "검토대기", tone: "warning" },
+  approved: { label: "병합완료", tone: "success" },
+  rejected: { label: "반려", tone: "danger" },
+  ignored: { label: "무시", tone: "neutral" },
+  on_hold: { label: "보류", tone: "info" },
+  expired: { label: "만료", tone: "neutral" },
+};
+
+export function mergeStatusMeta(s: MergeCandidateStatus) {
+  return MERGE_STATUS_META[s] ?? { label: s, tone: "neutral" as StatusTone };
+}
+
+const MERGE_SYNC_META: Record<MergeSyncStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "반영중", tone: "warning" },
+  completed: { label: "반영완료", tone: "success" },
+  failed: { label: "반영실패", tone: "danger" },
+};
+
+export function mergeSyncMeta(s: string) {
+  return MERGE_SYNC_META[s as MergeSyncStatus] ?? { label: s, tone: "neutral" as StatusTone };
+}
+
+const REASON_LABEL: Record<string, string> = {
+  business_number_match: "사업자번호 일치",
+  corporation_number_match: "법인등록번호 일치",
+  normalized_name_exact: "이름 정확 일치",
+  normalized_name_similar: "이름 유사",
+  representative_name_match: "대표자명 일치",
+  founder_phone_match: "대표 연락처 일치",
+  founder_email_match: "대표 이메일 일치",
+  website_domain_match: "웹사이트 도메인 일치",
+  business_number_conflict: "사업자번호 상충",
+  corporation_number_conflict: "법인등록번호 상충",
+  representative_name_conflict: "대표자명 상충",
+  email_conflict: "이메일 상충",
+  phone_conflict: "연락처 상충",
+  website_domain_conflict: "웹사이트 도메인 상충",
+};
+
+/** 중복 후보 매칭 사유·충돌 경고 키를 한글 라벨로. */
+export function reasonLabel(key: string): string {
+  return REASON_LABEL[key] ?? key;
+}
+
+const FIELD_POLICY_LABEL: Record<string, string> = {
+  target: "잔존 우선",
+  source: "소멸 우선",
+  source_if_verified: "검증 시 소멸값",
+  prefer_filled: "채워진 값 우선",
+  union: "합집합",
+};
+
+/** 병합 필드 정책 키를 한글 라벨로. */
+export function fieldPolicyLabel(key: string): string {
+  return FIELD_POLICY_LABEL[key] ?? key;
+}
 
 export function auditActionLabel(action: string): string {
   return ACTION_LABEL[action] ?? action;

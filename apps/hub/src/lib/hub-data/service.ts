@@ -18,12 +18,27 @@ import {
   mockListPartners,
 } from "./mock-masters";
 import { mockCreateTemporaryMaster } from "./mock-temporary";
+import {
+  mockApproveMerge,
+  mockGetMergeCandidateDetail,
+  mockHoldMerge,
+  mockIgnoreMerge,
+  mockListMergeCandidates,
+  mockPreviewMerge,
+  mockRejectMerge,
+} from "./mock-merge";
 import type {
   DashboardCounts,
   ExpertDetail,
   ExpertMaster,
   MasterSearchApiItem,
   MasterSearchResult,
+  MergeApproveInput,
+  MergeApproveResult,
+  MergeCandidateDetail,
+  MergeCandidateFilter,
+  MergeCandidateListItem,
+  MergePreview,
   PartnerDetail,
   PartnerMaster,
   RecentImportBatch,
@@ -131,4 +146,64 @@ export async function getRecentMergeEvents(): Promise<RecentMergeEvent[]> {
 export async function getRecentImportBatches(): Promise<RecentImportBatch[]> {
   ensureFallback();
   return mockRecentImportBatches();
+}
+
+/**
+ * 중복 후보 조회/병합(공통 계약). (근거: api_contracts §12~15, master_data_policy §10·13~15)
+ * 병합 승인은 정책 §10.3 혼합형 — 1단계 동기 커밋 + 2단계 비동기 FK 반영.
+ */
+export async function listMergeCandidates(
+  filter: MergeCandidateFilter,
+): Promise<MergeCandidateListItem[]> {
+  ensureFallback();
+  return mockListMergeCandidates(filter);
+}
+
+export async function getMergeCandidateDetail(id: string): Promise<MergeCandidateDetail | null> {
+  ensureFallback();
+  return mockGetMergeCandidateDetail(id);
+}
+
+export async function previewMerge(
+  id: string,
+  fieldPolicy?: Record<string, string>,
+): Promise<MergePreview | null> {
+  ensureFallback();
+  return mockPreviewMerge(id, fieldPolicy);
+}
+
+export async function approveMerge(
+  id: string,
+  input: MergeApproveInput,
+  actorName: string,
+): Promise<MergeApproveResult> {
+  ensureFallback();
+  return mockApproveMerge(id, input, actorName);
+}
+
+export async function rejectMerge(
+  id: string,
+  reason: string,
+  actorName: string,
+): Promise<MergeApproveResult> {
+  ensureFallback();
+  return mockRejectMerge(id, reason, actorName);
+}
+
+export async function ignoreMerge(
+  id: string,
+  reason: string,
+  actorName: string,
+): Promise<MergeApproveResult> {
+  ensureFallback();
+  return mockIgnoreMerge(id, reason, actorName);
+}
+
+export async function holdMerge(
+  id: string,
+  reason: string,
+  actorName: string,
+): Promise<MergeApproveResult> {
+  ensureFallback();
+  return mockHoldMerge(id, reason, actorName);
 }

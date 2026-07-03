@@ -26,9 +26,9 @@ import type {
  * Docker/staging 연결 시 이 로직은 hub.create_temporary_master RPC 로 교체한다(이슈21).
  */
 
-type AnyMaster = StartupMaster | ExpertMaster | PartnerMaster;
+export type AnyMaster = StartupMaster | ExpertMaster | PartnerMaster;
 
-function listOf(entityType: MasterEntity): AnyMaster[] {
+export function listOf(entityType: MasterEntity): AnyMaster[] {
   const s = store();
   if (entityType === "startup") return s.startups;
   if (entityType === "expert") return s.experts;
@@ -49,7 +49,7 @@ function nextSeq(entityType: MasterEntity): number {
 }
 
 /** 마스터의 정규화된 비교 필드를 조립한다(식별자 우선, 없으면 마스터 필드). */
-function comparableOf(entityType: MasterEntity, id: string): ComparableMaster {
+export function comparableOf(entityType: MasterEntity, id: string): ComparableMaster {
   const m = listOf(entityType).find((x) => x.id === id);
   const ids = store().identifiers.filter((i) => i.entityId === id);
   const byType = (t: string) => ids.find((i) => i.identifierType === t)?.normalizedValue ?? null;
