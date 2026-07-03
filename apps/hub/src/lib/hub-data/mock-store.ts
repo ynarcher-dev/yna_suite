@@ -1,9 +1,15 @@
 import type { EntityType } from "@yna/core";
-import { normalizeCompanyName } from "@yna/utils";
+import {
+  maskBusinessNumber,
+  maskEmail,
+  maskName,
+  maskPhone,
+  normalizeCompanyName,
+} from "@yna/utils";
 import { scoreMatch, toSearchResult, type StartupEditInput } from "./masters";
 import { seedState, type MergeCandidateRow, type MockState } from "./mock-seed";
 import type {
-  AuditEntry,
+  AuditLogListItem,
   DashboardCounts,
   IdentifierVerifiedStatus,
   MasterAlias,
@@ -97,21 +103,64 @@ export function subTables(entityType: MasterEntity, id: string) {
   };
 }
 
+/** 감사 항목 부가 정보(before/after 스냅샷·요청 상관관계 ID). */
+export interface AuditExtra {
+  before?: unknown;
+  after?: unknown;
+  requestId?: string;
+}
+
+/** 감사 상관관계 ID. envelope(newRequestId)와 동일 포맷. */
+export function newAuditRequestId(): string {
+  return `req_${crypto.randomUUID()}`;
+}
+
+/** 민감 필드 키별 마스킹. 감사 before/after 에 개인정보 원문을 남기지 않는다(security §11). */
+const SENSITIVE_AUDIT_FIELDS: Record<string, (v: string) => string> = {
+  representativeName: maskName,
+  businessNumber: maskBusinessNumber,
+  corporationNumber: maskBusinessNumber,
+  phone: maskPhone,
+  email: maskEmail,
+};
+
+function maskAuditValue(fieldName: string, value: string | null): string | null {
+  if (value == null || value === "") return value;
+  const masker = SENSITIVE_AUDIT_FIELDS[fieldName];
+  return masker ? masker(value) : value;
+}
+
+/** 필드 변경 목록에서 감사 before/after 스냅샷(민감 필드 마스킹)을 만든다. */
+export function auditFieldSnapshot(changes: FieldChange[]): { before: Record<string, string | null>; after: Record<string, string | null> } {
+  const before: Record<string, string | null> = {};
+  const after: Record<string, string | null> = {};
+  for (const c of changes) {
+    before[c.fieldName] = maskAuditValue(c.fieldName, c.oldValue);
+    after[c.fieldName] = maskAuditValue(c.fieldName, c.newValue);
+  }
+  return { before, after };
+}
+
 export function appendAudit(
   entityType: MasterEntity,
   action: string,
   entityId: string,
   actorName: string,
   reason: string | null,
+  extra?: AuditExtra,
 ): void {
   const s = store();
   s.audit.push({
     id: `au-${++s.auditSeq}`,
     actorName,
+    domainName: "hub",
     action,
     entityType,
     entityId,
+    before: extra?.before ?? null,
+    after: extra?.after ?? null,
     reason,
+    requestId: extra?.requestId ?? newAuditRequestId(),
     createdAt: new Date().toISOString(),
   });
 }
@@ -161,7 +210,7 @@ export function updateMasterFields(
   if (typeof patch.name === "string") master.normalizedName = normalizeCompanyName(master.name);
   master.updatedAt = new Date().toISOString();
   for (const c of changes) pushFieldHistory(id, c, reason, actorName, master.updatedAt);
-  appendAudit(entityType, "update", id, actorName, reason);
+  appendAudit(entityType, "update", id, actorName, reason, auditFieldSnapshot(changes));
   return true;
 }
 
@@ -238,7 +287,10 @@ export function setMasterStatus(
     actorName,
     master.updatedAt,
   );
-  appendAudit(entityType, "set_status", id, actorName, reason);
+  appendAudit(entityType, "set_status", id, actorName, reason, {
+    before: { status: before },
+    after: { status },
+  });
   return true;
 }
 
@@ -513,6 +565,34 @@ export function mockUpdateStartup(
   return updateMasterFields("startup", id, next, changes, actorName, reason);
 }
 
-export function mockListAudit(): AuditEntry[] {
-  return [...store().audit].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+/** masterCode 를 붙인 대상 라벨(감사 조회 표시용). 마스터가 없으면 null. */
+function auditEntityLabel(entityType: string, entityId: string | null): string | null {
+  if (!entityId) return null;
+  if (entityType !== "startup" && entityType !== "expert" && entityType !== "partner") return null;
+  const master = findMasterRef(entityType, entityId);
+  return master ? `${master.masterCode} · ${master.name}` : entityId;
+}
+
+/**
+ * 감사 로그 조회(전 엔티티, 최신순). 로그는 append-only 이며 이 스토어에 수정/삭제 mutation 이 없다.
+ * (근거: data_model §12, api_contracts §5)
+ */
+export function mockListAuditLogs(filter: {
+  q?: string;
+  entityType?: string;
+  action?: string;
+} = {}): AuditLogListItem[] {
+  const q = filter.q?.trim().toLowerCase();
+  return [...store().audit]
+    .filter((e) => {
+      if (filter.entityType && e.entityType !== filter.entityType) return false;
+      if (filter.action && e.action !== filter.action) return false;
+      if (q) {
+        const hay = `${e.actorName} ${e.reason ?? ""} ${e.entityId ?? ""} ${e.requestId}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .map((e) => ({ ...clone(e), entityLabel: auditEntityLabel(e.entityType, e.entityId) }));
 }

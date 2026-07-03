@@ -132,11 +132,23 @@ export function seedState(): MockState {
   ];
 
   const audit: AuditEntry[] = [
-    auditRow("au-1", "관리자(개발)", "merge", "startup", "st-1", "동일 대표자 및 유사명 확인", "2026-06-18T05:00:00Z"),
-    auditRow("au-2", "관리자(개발)", "update", "startup", "st-1", "법인 설립 정보 반영", "2026-04-01T05:00:00Z"),
+    auditRow("au-1", "관리자(개발)", "merge", "startup", "st-1", "동일 대표자 및 유사명 확인", "2026-06-18T05:00:00Z", {
+      before: { masterCode: "ST-0001" },
+      after: { absorbed: "ST-0007", syncStatus: "completed" },
+    }),
+    auditRow("au-2", "관리자(개발)", "update", "startup", "st-1", "법인 설립 정보 반영", "2026-04-01T05:00:00Z", {
+      before: { legalName: null, businessNumber: null },
+      after: { legalName: "알파테크 주식회사", businessNumber: "123-**-*****" },
+    }),
     auditRow("au-3", "이심사", "create_temporary", "startup", "st-temp", "Work 신청 유입 임시 마스터", "2026-07-01T02:00:00Z"),
-    auditRow("au-4", "관리자(개발)", "update", "expert", "ex-1", "소속 변경 확인", "2026-06-10T05:00:00Z"),
-    auditRow("au-5", "관리자(개발)", "update", "partner", "pt-2", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z"),
+    auditRow("au-4", "관리자(개발)", "update", "expert", "ex-1", "소속 변경 확인", "2026-06-10T05:00:00Z", {
+      before: { organization: "베타벤처스" },
+      after: { organization: "감마파트너스" },
+    }),
+    auditRow("au-5", "관리자(개발)", "update", "partner", "pt-2", "법인 전환에 따른 기관명 변경", "2026-05-15T05:00:00Z", {
+      before: { name: "델타자문" },
+      after: { name: "델타자문 주식회사" },
+    }),
   ];
 
   return {
@@ -232,6 +244,19 @@ function auditRow(
   entityId: string,
   reason: string,
   createdAt: string,
+  extra?: { before?: unknown; after?: unknown },
 ): AuditEntry {
-  return { id, actorName, action, entityType, entityId, reason, createdAt };
+  return {
+    id,
+    actorName,
+    domainName: "hub",
+    action,
+    entityType,
+    entityId,
+    before: extra?.before ?? null,
+    after: extra?.after ?? null,
+    reason,
+    requestId: `req_seed-${id}`,
+    createdAt,
+  };
 }

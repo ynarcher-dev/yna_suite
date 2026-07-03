@@ -13,12 +13,36 @@ import {
   THead,
   TR,
 } from "@yna/ui";
-import { actionLabel, fmtDateTime } from "@/lib/dev-data/display";
-import type { PermissionAuditEntry } from "@/lib/dev-data/types";
+import { auditActionLabel, ENTITY_LABEL, fmtDateTime } from "@/lib/hub-data/display";
+import type { EntityType } from "@yna/core";
+import type { AuditLogListItem } from "@/lib/hub-data/types";
 
-const ACTIONS = ["update", "apply_template", "invite", "invite_external", "link_external", "set_status"];
+/**
+ * Hub 공통 감사 로그 조회. (근거: functional_spec §16, api_contracts §5, data_model §12)
+ * 로그는 수정/삭제 불가(조회 전용)이며, before/after 는 민감 필드가 마스킹된 스냅샷이다(개인정보 원문 미저장).
+ */
+const ACTIONS = [
+  "create_temporary",
+  "update",
+  "set_status",
+  "add_identifier",
+  "set_primary",
+  "verify_identifier",
+  "remove_identifier",
+  "add_alias",
+  "remove_alias",
+  "view_sensitive",
+  "merge",
+  "reject_merge",
+  "ignore_merge",
+  "hold_merge",
+];
 
-/** before/after 스냅샷을 "key: value" 문자열로. 값이 없으면 null. */
+function entityLabel(entityType: string): string {
+  return ENTITY_LABEL[entityType as EntityType] ?? entityType;
+}
+
+/** before/after 스냅샷을 "key: value" 목록으로 표현. 값이 없으면 null 반환. */
 function snapshotLines(snapshot: unknown): string[] | null {
   if (snapshot == null || typeof snapshot !== "object") return null;
   const entries = Object.entries(snapshot as Record<string, unknown>);
@@ -47,43 +71,55 @@ function ChangeDetail({ before, after }: { before: unknown; after: unknown }) {
   );
 }
 
-/**
- * 권한 감사 로그 조회. (근거: functional_spec §16, api_contracts §5·§17)
- * 로그는 수정/삭제 불가이며 개인정보 원문은 저장하지 않는다(before/after 는 권한 스냅샷).
- */
-export function AuditLogsTable({ entries }: { entries: PermissionAuditEntry[] }) {
+export function AuditLogsTable({ entries }: { entries: AuditLogListItem[] }) {
   const [q, setQ] = useState("");
-  const [action, setAction] = useState("");
+  const [entity, setEntity] = useState<string>("");
+  const [action, setAction] = useState<string>("");
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return entries.filter((e) => {
+      if (entity && e.entityType !== entity) return false;
       if (action && e.action !== action) return false;
-      if (query && !`${e.targetName} ${e.actorName}`.toLowerCase().includes(query)) return false;
+      if (query) {
+        const hay = `${e.actorName} ${e.reason ?? ""} ${e.entityLabel ?? ""} ${e.requestId}`.toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
       return true;
     });
-  }, [entries, q, action]);
+  }, [entries, q, entity, action]);
 
   return (
     <div className="flex flex-col gap-3">
       <FilterBar trailing={<span className="text-sm text-gray-500">{filtered.length}건</span>}>
         <Input
-          placeholder="대상·변경자 검색"
+          placeholder="변경자·대상·사유·request_id 검색"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="w-56"
+          className="w-64"
           aria-label="감사 로그 검색"
         />
         <Select
+          value={entity}
+          onChange={(e) => setEntity(e.target.value)}
+          className="w-32"
+          aria-label="엔티티 필터"
+        >
+          <option value="">엔티티 전체</option>
+          <option value="startup">스타트업</option>
+          <option value="expert">전문가</option>
+          <option value="partner">협력사</option>
+        </Select>
+        <Select
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          className="w-44"
+          className="w-40"
           aria-label="작업 필터"
         >
           <option value="">작업 전체</option>
           {ACTIONS.map((a) => (
             <option key={a} value={a}>
-              {actionLabel(a)}
+              {auditActionLabel(a)}
             </option>
           ))}
         </Select>
@@ -98,9 +134,8 @@ export function AuditLogsTable({ entries }: { entries: PermissionAuditEntry[] })
               <TH>시각</TH>
               <TH>작업</TH>
               <TH>대상</TH>
-              <TH>도메인</TH>
               <TH>변경자</TH>
-              <TH>사유</TH>
+              <TH className="hidden md:table-cell">사유</TH>
               <TH className="hidden lg:table-cell">변경 내용</TH>
               <TH className="hidden xl:table-cell">request_id</TH>
             </TR>
@@ -109,11 +144,15 @@ export function AuditLogsTable({ entries }: { entries: PermissionAuditEntry[] })
             {filtered.map((e) => (
               <TR key={e.id}>
                 <TD className="whitespace-nowrap text-gray-600">{fmtDateTime(e.createdAt)}</TD>
-                <TD>{actionLabel(e.action)}</TD>
-                <TD className="font-medium text-gray-900">{e.targetName}</TD>
-                <TD className="text-gray-600">{e.domain ?? "—"}</TD>
+                <TD className="whitespace-nowrap">{auditActionLabel(e.action)}</TD>
+                <TD>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-400">{entityLabel(e.entityType)}</span>
+                    <span className="text-sm text-gray-800">{e.entityLabel ?? e.entityId ?? "—"}</span>
+                  </div>
+                </TD>
                 <TD className="text-gray-600">{e.actorName}</TD>
-                <TD className="text-gray-600">{e.reason ?? "—"}</TD>
+                <TD className="hidden text-gray-600 md:table-cell">{e.reason ?? "—"}</TD>
                 <TD className="hidden lg:table-cell">
                   <ChangeDetail before={e.before} after={e.after} />
                 </TD>

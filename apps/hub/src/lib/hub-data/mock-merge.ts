@@ -6,7 +6,7 @@ import {
   type MergeFieldInput,
   type MergeFieldPolicy,
 } from "@yna/master-data";
-import { store, appendAudit, subTables, type MasterEntity } from "./mock-store";
+import { store, appendAudit, newAuditRequestId, subTables, type MasterEntity } from "./mock-store";
 import { comparableOf, listOf, type AnyMaster } from "./mock-temporary";
 import { MERGE_FIELD_SPECS, applyFieldValue, fieldToString } from "./merge-fields";
 import type { MergeCandidateRow } from "./mock-seed";
@@ -316,8 +316,18 @@ export function mockApproveMerge(
   });
 
   c.status = "approved";
-  appendAudit(c.entityType, "merge", target.id, actorName, reason);
-  appendAudit(c.entityType, "merge", source.id, actorName, `${target.masterCode} 로 병합`);
+  // 같은 병합 요청의 두 감사 항목을 하나의 request_id 로 상관관계 짓는다(audit 표준 §5).
+  const requestId = newAuditRequestId();
+  appendAudit(c.entityType, "merge", target.id, actorName, reason, {
+    requestId,
+    before: { masterCode: target.masterCode },
+    after: { absorbed: source.masterCode, syncStatus },
+  });
+  appendAudit(c.entityType, "merge", source.id, actorName, `${target.masterCode} 로 병합`, {
+    requestId,
+    before: { status: "active" },
+    after: { status: "merged", mergedInto: target.masterCode },
+  });
 
   return { ok: true, targetId: target.id, eventId, syncStatus };
 }
@@ -335,8 +345,12 @@ function setCandidateStatus(
   const c = findCandidate(id);
   if (!c) return { ok: false, error: "병합 후보를 찾을 수 없습니다." };
   if (c.status === "approved") return { ok: false, error: "이미 병합된 후보입니다." };
+  const beforeStatus = c.status;
   c.status = status;
-  appendAudit(c.entityType, action, c.targetId, actorName, reason.trim());
+  appendAudit(c.entityType, action, c.targetId, actorName, reason.trim(), {
+    before: { candidateStatus: beforeStatus },
+    after: { candidateStatus: status },
+  });
   return { ok: true, targetId: c.targetId };
 }
 

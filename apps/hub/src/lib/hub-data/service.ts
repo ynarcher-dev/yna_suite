@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/auth/env";
 import {
   mockDashboardCounts,
   mockGetStartupDetail,
+  mockListAuditLogs,
   mockListStartups,
   mockRecentImportBatches,
   mockRecentMergeEvents,
@@ -28,6 +29,8 @@ import {
   mockRejectMerge,
 } from "./mock-merge";
 import type {
+  AuditLogFilter,
+  AuditLogListItem,
   DashboardCounts,
   ExpertDetail,
   ExpertMaster,
@@ -206,4 +209,10 @@ export async function holdMerge(
 ): Promise<MergeApproveResult> {
   ensureFallback();
   return mockHoldMerge(id, reason, actorName);
+}
+
+/** 공통 감사 로그 조회(전 엔티티, 최신순). 로그는 수정/삭제 불가. (api_contracts §5, data_model §12) */
+export async function listAuditLogs(filter: AuditLogFilter = {}): Promise<AuditLogListItem[]> {
+  ensureFallback();
+  return mockListAuditLogs(filter);
 }

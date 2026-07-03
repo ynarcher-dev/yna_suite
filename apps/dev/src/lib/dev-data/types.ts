@@ -38,6 +38,8 @@ export interface PermissionAuditEntry {
   before: unknown;
   after: unknown;
   reason: string | null;
+  /** 동일 요청 상관관계 ID(req_<uuid>). (audit 표준 §5) */
+  requestId: string;
   createdAt: string;
 }
 

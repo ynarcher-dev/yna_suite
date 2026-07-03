@@ -486,6 +486,7 @@ CREATE TABLE dev.permission_audit_logs (
     before_value JSONB NULL,                                  -- 변경 전 권한 값
     after_value JSONB NULL,                                   -- 변경 후 권한 값
     reason TEXT NULL,                                        -- 변경 사유
+    request_id TEXT NULL,                                     -- 동일 요청 상관관계 ID (req_<uuid>)
     created_at TIMESTAMPTZ DEFAULT now()                      -- 기록 시각
 );
 ```
@@ -1034,6 +1035,7 @@ CREATE TABLE hub.audit_logs (
     before_value JSONB NULL,                                  -- 변경 전 값
     after_value JSONB NULL,                                   -- 변경 후 값
     reason TEXT NULL,                                        -- 액션 사유
+    request_id TEXT NULL,                                     -- 동일 요청 상관관계 ID (req_<uuid>)
     created_at TIMESTAMPTZ DEFAULT now()                      -- 기록 시각
 );
 ```

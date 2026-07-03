@@ -30,6 +30,22 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.11 감사 로그
+*   **완료**:
+    *   **스키마 정합**(마이그레이션 `20260703200001_add_request_id_to_audit_logs.sql`): audit 표준(api_contracts §5·security §15)이 `request_id` 를 필수 기록 항목으로 규정하나 1.3 DDL(171005·171006)엔 누락 → `hub.audit_logs`·`dev.permission_audit_logs` 에 `request_id TEXT NULL`(+COMMENT) 추가(스키마만, backfill 없음). `docs/yna_suite_data_model.md` §12·§5.3 DDL 도 함께 갱신.
+    *   **Hub 감사 모델 보강**(`hub-data/types.ts`·`mock-store.ts`·`mock-seed.ts`): `AuditEntry` 에 `domainName`·`before`·`after`·`requestId` 추가. `appendAudit(…, extra?)` 로 before/after 스냅샷·requestId(기본 `req_<uuid>`) 기록, `auditFieldSnapshot(changes)` 가 민감필드(대표자/사업자번호/법인번호/전화/이메일)를 `@yna/utils` 마스킹으로 스냅샷화(개인정보 원문 미저장, security §11). `updateMasterFields`(변경필드 마스킹 스냅샷)·`setMasterStatus`(status before/after)·병합 승인/반려 audit 에 스냅샷 적용, **병합 2행(target/source)은 동일 requestId 로 상관관계**(`mock-merge.ts`).
+    *   **Hub 전용 감사 조회 화면**: `service.listAuditLogs(filter)` + `mock-store.mockListAuditLogs`(전 엔티티·검색[actor/reason/entityLabel/request_id]/엔티티/작업 필터 + masterCode·name 라벨 resolve). 라우트 `(app)/audit-logs/page.tsx`(nav 엔 이미 `/audit-logs` 항목 존재, 라우트 신설) + `components/audit/audit-logs-table.tsx`(시각·작업·대상·변경자·사유·변경내용[before/after native `<details>`]·request_id, 반응형 열).
+    *   **Dev 감사 화면 보강**(`dev-data/types.ts`·`mock-store.ts`·`components/users/audit-logs-table.tsx`): `PermissionAuditEntry.requestId` 추가(seed 2행·`appendAudit` `req_<uuid>`), 기존 `/permission-audit-logs` 테이블에 "변경 내용"(before/after `<details>`)·request_id 열 추가.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 permissions 29·master-data 17·utils 12 pass, `pnpm build`(hub/dev) 2/2(신규 `/audit-logs` ○ 등록). **hub/dev 프로덕션 smoke**: `GET /audit-logs` 200(감사 로그 렌더·엔티티라벨 `ST-…·이름`·작업 라벨[병합/정보 변경/임시 생성/민감정보 원본 조회]·before/after `변경 보기` disclosure·마스킹 `123-**-*****`·`req_seed-au-*`), `GET /permission-audit-logs` 200(변경 보기·`req_seed-a-*`), 기존 `/`·`/startups`·`/merge-candidates` 200 유지, 병합 승인 API 200(envelope `request_id` + me-2·completed).
+    *   **미검증(이슈28)**: Docker 미설치로 실제 audit 테이블 `request_id` 컬럼 적용·RLS·`supabase db reset`/`gen types` 는 미검증(이슈15 연장, 마이그레이션 문법 파서는 이 기기에 미설치라 db reset 시 검증). dev 폴백에서 `/audit-logs`·`/startups`·`/merge-candidates` 는 세션 미의존이라 빌드시 정적 프리렌더(런타임 mock mutation 이 화면에 즉시 반영 안 됨) — 운영/스테이징은 `(app)` layout 의 session 조회로 동적 렌더.
+*   **다음 작업**: **Phase 1.12 기존 스타트업 DB 마이그레이션 도구** — `staging.import_batches`/`startup_import_rows` 적재, 컬럼 매핑·정규화(raw_payload 보존), import batch 처리·검증 리포트, dry-run/rollback, Hub Import Batch 조회 화면. (nav 에 이미 `/import-batches`·`/temporary-masters` 항목 존재, 라우트 신설 필요.)
+*   **주의점**:
+    *   **감사 로그 append-only**: `hub-data`·`dev-data` 스토어에 감사 항목을 수정/삭제하는 mutation 이 없다(불변성). Docker/staging 연결 시 `hub.audit_logs`/`dev.permission_audit_logs` 에 UPDATE/DELETE 정책을 두지 않는 것으로 최종 강제(1.4 RLS 는 이미 DELETE 정책 없음).
+    *   **before/after 는 민감필드 마스킹 스냅샷**(전체 개인정보 payload 미저장, security §11). 식별자/별칭 add/remove/verify/primary/reveal 은 값 자체가 민감이라 before/after 를 의도적으로 null 로 둔다(action+entity+reason+request_id 로 추적, 원문은 미저장). 실데이터 연결 시 원문은 서버 마스킹+RLS 로 강제.
+    *   **request_id 컬럼**은 표준(§5·§15)엔 있었으나 1.3 DDL 에 없어 이번에 추가 — audit 표준↔스키마 드리프트 해소(이슈28). 같은 요청의 다중 감사(병합 target+source)는 동일 request_id 공유.
+    *   포트 3000/3001 stale 서버 남으면 smoke 전 종료(이전 handoff 동일 — 이번에도 stale PID 종료 후 재기동).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.10 중복 후보 · 수동 병합
 *   **완료**:
     *   **순수 병합 로직**(`@yna/master-data/merge/resolve.ts`): `resolveMergeField`/`resolveMergeFields`(정책 target/source/source_if_verified/prefer_filled/union), `detectMergeWarnings`(사업자/법인/대표자/이메일/전화/도메인 상충), `hasBlockingConflict`(강한 식별자 충돌=승인 차단). 단위 테스트 9개(master-data 총 17). §13 후보 점수·`generateCandidates`(1.8)는 그대로 재사용.

@@ -144,15 +144,35 @@ export interface MergeCandidateSummary {
   status: string;
 }
 
-/** hub.audit_logs 요약 항목. */
+/** hub.audit_logs 항목. (data_model §12 — actor·domain·entity·action·before/after·reason·request_id) */
 export interface AuditEntry {
   id: string;
   actorName: string;
+  /** 액션이 발생한 서비스 도메인(hub 마스터 액션은 "hub"). */
+  domainName: string;
   action: string;
   entityType: string;
   entityId: string | null;
+  /** 변경 전/후 스냅샷. 개인정보 원문은 저장하지 않고 민감 필드는 마스킹한다(security §11). */
+  before: unknown;
+  after: unknown;
   reason: string | null;
+  /** 동일 요청 상관관계 ID(req_<uuid>). */
+  requestId: string;
   createdAt: string;
+}
+
+/** 감사 로그 조회 화면 항목(대상 마스터 라벨 포함). */
+export interface AuditLogListItem extends AuditEntry {
+  /** 대상 마스터 표시 라벨(masterCode 등). 조회 시 resolve. */
+  entityLabel: string | null;
+}
+
+/** 감사 로그 조회 필터. (functional_spec §16 유형) */
+export interface AuditLogFilter {
+  q?: string;
+  entityType?: string;
+  action?: string;
 }
 
 /** 스타트업 마스터 상세 화면 데이터. (functional_spec §7 섹션 구성) */

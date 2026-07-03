@@ -214,13 +214,14 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
     *   1단계(동기): source 상태 변경만 빠르게 커밋. 2단계(비동기): 타 도메인 FK 일괄 업데이트를 백그라운드 워커로. 진행 중 조회는 공통 resolved view/helper로 실시간 resolve. (Phase 1 은 대상 0건이라 즉시 완료; 실제 워커·FK 반영은 Work 연결[1.13/Phase 2]에서.)
     *   업무 도메인 쿼리는 hub 마스터 직접 조인 + 개별 `COALESCE` 작성을 금지하고 `packages/database` 표준 query helper 또는 DB view를 사용. (`resolveMasterId`/`isMerged`/`RESOLVED_MASTER_VIEW` helper + `hub.resolved_startups/experts/partners` view 마이그레이션)
 
-### [ ] Phase 1.11 감사 로그
+### [x] Phase 1.11 감사 로그
 *(근거: yna_suite_data_model.md §11, yna_suite_security_policy.md §15, yna_suite_api_contracts.md §5)*
+> 진행: 감사 모델을 표준 전 필드(actor·domain·entity·action·before/after·reason·request_id)로 보강 — Hub `AuditEntry`에 domain/before-after/request_id 추가, `appendAudit`가 민감필드 마스킹 스냅샷·상관관계 request_id 기록(병합 2행은 동일 request_id). Hub 전용 감사 조회 화면 `/audit-logs`(전 엔티티·검색/엔티티/작업 필터·before/after 상세·request_id) 신설, Dev `/permission-audit-logs`에 before/after·request_id 표시 보강. audit 테이블에 request_id 컬럼 마이그레이션 + data_model DDL 동기화. 로그는 append-only(수정/삭제 mutation 없음), 개인정보 원문 미저장(민감필드 마스킹). typecheck 10/10·lint 10/10·test(permissions29/master-data17/utils12)·build 2/2 + hub/dev smoke(/audit-logs·/permission-audit-logs 200·마스킹[`123-**-*****`]·request_id·before/after 렌더). (2026-07-03)
 
-*   **[ ] 감사 로그 기록**
-    *   `hub.audit_logs`(마스터 변경·병합·다운로드 등), `dev.permission_audit_logs`(권한 변경). actor·domain·entity·action·before/after·reason·request_id 기록.
-*   **[ ] 감사 로그 조회**
-    *   기본 조회 화면. 로그는 수정/삭제 불가, 개인정보 원문 payload 저장 금지.
+*   **[x] 감사 로그 기록**
+    *   `hub.audit_logs`(마스터 변경·병합·다운로드 등), `dev.permission_audit_logs`(권한 변경). actor·domain·entity·action·before/after·reason·request_id 기록. (1.5~1.10 이 각 변경마다 audit 를 남기던 것을 1.11 에서 표준 전 필드로 보강 — before/after 스냅샷은 민감필드 마스킹, 병합처럼 한 요청의 다중 항목은 동일 request_id 로 상관관계.)
+*   **[x] 감사 로그 조회**
+    *   기본 조회 화면. 로그는 수정/삭제 불가, 개인정보 원문 payload 저장 금지. (Hub `/audit-logs` 전 엔티티 조회 + Dev `/permission-audit-logs` 보강. append-only — 스토어에 수정/삭제 mutation 없음. before/after 는 민감필드 마스킹 스냅샷으로 원문 미저장.)
 
 ### [ ] Phase 1.12 기존 스타트업 DB 마이그레이션 도구
 *(근거: yna_suite_migration_strategy.md, yna_suite_hub_dev_functional_spec.md §14)*

@@ -185,6 +185,19 @@
     *   **병합 권한**: 정책 §17 "hub write + master_data_merge 또는 master role" 중, 현재 세션 모델은 도메인 read/write 만 담아 `requireMergeAccess`=hub write 로 확인하고, 세분 권한(master_data_merge)은 실데이터 연결 시 RLS `dev.can_merge_master` 가 최종 강제한다(UI/API 는 UX, 최종 보안은 RLS — 일관 방침).
     *   **마스터 상세 연결**: 스타트업/전문가/협력사 상세의 중복후보 섹션 링크를 반대편 마스터가 아니라 **검토 화면**(`/merge-candidates/{id}`)으로 바꿔 병합 흐름의 단일 진입점을 만들었다(`MergeCandidatesSection` basePath prop 제거).
 
+## 1-11. 감사 로그 메모 (Phase 1.11, 2026-07-03)
+
+### 📌 이슈 28: 감사 표준 request_id 컬럼 드리프트 + before/after 마스킹 스냅샷 + append-only (작성일자: 2026-07-03)
+*   **상황**: Phase 1.11 은 `hub.audit_logs`/`dev.permission_audit_logs` 를 actor·domain·entity·action·**before/after·reason·request_id** 전 필드로 기록하고, 수정/삭제 불가·개인정보 원문 payload 미저장 조회 화면을 요구한다(api_contracts §5·security §15·data_model §12). 1.5~1.10 은 각 변경마다 audit 를 남기되 Hub `AuditEntry` 는 actor/action/entity/reason/createdAt 만, Dev 는 before/after 는 있으나 request_id 가 없었다.
+*   **문제**: (1) **표준↔스키마 드리프트** — `request_id` 는 audit 표준(§5·§15)의 필수 항목이나 1.3 마이그레이션 DDL(171005·171006)의 audit 테이블에는 컬럼이 없었다. (2) before/after 에 변경 값을 남기되 **개인정보 원문 전체 payload 저장 금지**(security §11)를 어떻게 만족시키는지 — 대표자명/사업자번호/전화/이메일은 민감. (3) "수정/삭제 불가"(불변성)를 어떻게 보장하는지. (4) Hub 는 전용 감사 조회 화면이 없었다(상세의 auditSummary 요약만, 최근 10건).
+*   **해결**:
+    *   **request_id 컬럼 추가**: 마이그레이션 `20260703200001_add_request_id_to_audit_logs.sql` 로 두 테이블에 `request_id TEXT NULL`(+COMMENT) 추가(스키마만, 기존 행 backfill 없음). `docs/yna_suite_data_model.md` §12·§5.3 DDL 도 동기화. 한 요청에서 발생한 다중 감사(예: 병합 승인의 target+source 2행)는 `newAuditRequestId()`=`req_<uuid>` 를 **공유**해 상관관계 짓는다. HTTP API 경로의 envelope request_id 와 동일 포맷.
+    *   **before/after 마스킹 스냅샷**: `appendAudit(…, extra?)` 가 before/after 스냅샷을 받고, `auditFieldSnapshot(changes)` 가 민감 필드(대표자명→maskName, 사업자/법인번호→maskBusinessNumber, 전화→maskPhone, 이메일→maskEmail)를 `@yna/utils` 마스킹으로 스냅샷화한다. 즉 **무엇이 바뀌었는지(필드·비민감값)는 남기되 개인정보 원문은 저장하지 않는다**. 식별자/별칭 add/remove/verify/primary/reveal 은 값 자체가 민감이라 before/after 를 의도적으로 null 로 두고 action+entity+reason+request_id 로만 추적(원문 미저장). 이는 목록 마스킹(이슈23)·원본조회 audit(이슈26) 방침의 연장이다.
+    *   **append-only(불변성)**: `hub-data`·`dev-data` mock 스토어에 감사 항목 수정/삭제 mutation 을 두지 않음(추가만). 최종 강제는 RLS — 1.4 정책에서 audit 테이블에 DELETE 정책이 없고(물리 삭제 금지) UPDATE 정책도 두지 않아 authenticated 경로로는 변경 불가, INSERT 는 service_role 전용.
+    *   **Hub 전용 조회 화면**: `/audit-logs`(nav 엔 이미 항목 존재, 라우트 신설) — 전 엔티티·검색/엔티티/작업 필터·before/after native `<details>` 상세·request_id·대상 masterCode 라벨. Dev `/permission-audit-logs`(1.5) 에는 before/after·request_id 열을 보강. 두 화면 모두 "수정·삭제되지 않는다" 안내.
+    *   **정적 프리렌더 특성**: dev 폴백(무-env)에서 `/audit-logs`(및 기존 `/startups`·`/merge-candidates`)는 세션 미의존이라 빌드 시 정적 프리렌더된다 — 런타임 mock mutation 이 화면에 즉시 반영되지 않음(smoke 는 seed 렌더 + 병합 API envelope 로 검증). 운영/스테이징은 `(app)` layout 의 `getSession()` 쿠키 조회로 라우트가 동적 렌더되어 실시간 반영된다. 렌더 전략은 형제 목록 페이지와 일치시켜 별도 force-dynamic 은 두지 않음.
+    *   **미검증(이슈15 연장)**: Docker 미설치로 마이그레이션 실제 적용(`supabase db reset`)·`gen types`·RLS 는 미검증. SQL 오프라인 파서(pg-query-emscripten)는 이 기기에 미설치라 문법은 표준 ALTER/COMMENT 4문(육안·괄호균형 확인)으로 두고 db reset 시 최종 검증.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

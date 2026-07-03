@@ -96,6 +96,7 @@ function seedAudit(): PermissionAuditEntry[] {
       before: null,
       after: { role: "business_team" },
       reason: "신규 사업부 직원 기본 권한 부여",
+      requestId: "req_seed-a-1",
       createdAt: "2026-06-20T11:06:00Z",
     },
     {
@@ -107,6 +108,7 @@ function seedAudit(): PermissionAuditEntry[] {
       before: null,
       after: { kind: "guest_startup", scope_id: "startup-1" },
       reason: "Work 신청 포털 접근 연결",
+      requestId: "req_seed-a-2",
       createdAt: "2026-06-25T09:05:00Z",
     },
   ];
@@ -157,6 +159,7 @@ function appendAudit(input: AuditInput): void {
     before: input.before,
     after: input.after,
     reason: input.reason,
+    requestId: `req_${crypto.randomUUID()}`,
     createdAt: new Date().toISOString(),
   });
 }
