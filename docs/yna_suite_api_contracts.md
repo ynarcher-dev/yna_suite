@@ -759,11 +759,27 @@ Mock API:
 
 ```txt
 POST /api/mock/work/programs
+GET  /api/mock/work/programs
 POST /api/mock/work/programs/{program_id}/modules
 POST /api/mock/work/applications
+GET  /api/mock/work/applications
+GET  /api/mock/work/applications/{application_id}   병합 후 resolved_startup_id 확인(step 10)
 POST /api/mock/work/activities
 POST /api/mock/work/meeting-minutes
 ```
+
+신청 응답의 병합 반영(핵심 확인점):
+
+```txt
+연결한 startup_id 는 병합 후에도 그대로 보존한다(Hub 마스터 직접 수정 금지).
+최종 마스터는 resolved_startup_id 로 조회 시 실시간 resolve 한다
+(resolveMasterId = COALESCE(merged_into_id, id), master_data_policy §10.3).
+GET .../applications/{id} 응답: { startup_id, resolved_startup_id, resolved_master_code, merged, ... }
+```
+
+구현(Phase 1.13): Hub 내부 "도메인 연결 테스트" 기능으로 제공한다.
+Mock 스토어·API·화면(`/domain-test`)은 `apps/hub` 안에 두고 Hub mock 마스터/병합/resolved 를 재사용한다.
+work.* DB 테이블·마이그레이션은 만들지 않는다(in-memory mock, 실제 Work 스키마는 Phase 2 에서 교체).
 
 Mock program 요청 핵심 필드:
 

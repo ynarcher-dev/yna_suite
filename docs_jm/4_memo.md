@@ -212,6 +212,18 @@
     *   **staging 스키마**: 마이그레이션 `20260703210001_create_staging_import_tables.sql`(import_batches·startup_import_rows). data_model §11 DDL 대비 `is_dry_run`·`archived_at`·`decision_kind` 를 보강(문서도 동기화). staging 도 개인정보 대상이라 hub read/write RLS + DELETE 금지(rollback=archived UPDATE), service_role 은 batch 처리에서 bypass. SQL 오프라인 파서(pg-query-emscripten, 스크래치패드 설치)로 **18 statements 통과**.
     *   **미검증(이슈29)**: Docker 미설치로 staging 실제 적재·`hub_entity_id` FK·RLS·`supabase db reset`/`gen types` 는 미검증. API·store 는 dev 폴백 seam 으로 구동(env 설정 시 명시적 오류). 이관 UI 는 CSV 붙여넣기(첫 줄 헤더)만 지원 — 파일 업로드·엑셀 파서는 실데이터 연결 시.
 
+## 1-13. Work 연결 Mock/Test Flow 메모 (Phase 1.13, 2026-07-03)
+
+### 📌 이슈 30: Work 연결 계약 검증 — mock 위치·production 비활성화·신청 FK resolve (작성일자: 2026-07-03)
+*   **상황**: Phase 1.13 은 실제 Work 앱을 완성하지 않고도 "도메인 앱이 붙었을 때의 핵심 연결 계약"을 검증하도록 요구한다. Program First 를 얇게 재현(program/module/application/activity/meeting_minutes)하고, work 권한 사용자→프로그램/모듈→Hub 스타트업 검색·연결→유사 신규 임시 마스터→중복 후보→병합 승인→**신청 FK 가 최종 마스터로 이동**→custom activity·회의록·첨부→audit/merge event 를 자동 검증한다(phase1_scope §11, api_contracts §19, existing_source_alignment).
+*   **문제**: (1) Work 앱(`apps/work`)은 아직 placeholder 뿐인데 mock Work 를 어디에 둘지. (2) mock API 를 production 에 노출하면 안 된다("staging/dev 에서만"). (3) 병합은 2단계 비동기(§10.3)라 승인 시 타 도메인 FK 를 즉시 바꾸지 않는데, "신청 FK 가 최종 마스터로 이동"을 Hub 마스터 직접 수정 없이 어떻게 증명하는지. (4) 실제 Work 스키마·RLS 는 Docker 미설치로 못 붙인다(이슈15·21 연장).
+*   **해결**:
+    *   **mock 위치 = Hub 내부 "도메인 연결 테스트" 기능**: api_contracts §19 가 제시한 세 옵션 중 "Hub 내부의 도메인 연결 테스트 기능"을 채택했다. `apps/hub/src/lib/work-mock/`(types·mock-store·flow) + Mock Work API(`/api/mock/work/*`) + 화면 `/domain-test`. Hub mock 스토어(마스터·임시 생성·병합·resolved)와 같은 프로세스라 계약을 그대로 재사용한다. 실제 Work 앱(Phase 2, `apps/work`)이 붙으면 이 mock 은 work 스키마 조회로 교체된다 — work.* DB 테이블은 이번에 만들지 않는다(마이그레이션 없음, in-memory).
+    *   **production 비활성화**: `api/mock/work/guard.ts` 의 `assertMockEnabled()` 가 `NEXT_PUBLIC_APP_ENV==='production'` 이면 즉시 not_found. Mock API 도 Dev 권한/RLS 를 우회하지 않고 **work 도메인 read/write 를 직접 확인**(dev 폴백 세션은 master 권한이라 통과). 화면 실행 액션도 동일 가드.
+    *   **신청 FK resolve = §10.3 증명의 핵심**: 신청(`WorkApplication.startupId`)은 연결 당시 마스터 id 를 **그대로 보존**하고, 조회 시 `@yna/database resolveMasterId`(COALESCE(merged_into_id,id))로 최종 마스터를 실시간 resolve 한다(`WorkApplicationView.resolvedStartupId`). 병합 후 스모크: application2 의 `startup_id=st-new-94`(source, 불변) · `resolved_startup_id=st-new-93`(target) · `merged=true`. 즉 Work 가 Hub 마스터를 직접 수정하지 않고, 신청 이력이 resolved view/helper 로 최종 마스터에 귀속됨을 보인다(2단계 비동기 반영을 도메인 앱 없이도 의미 있게 재현).
+    *   **자동 검증 이중 경로, 단일 오케스트레이션**: 인프로세스 `work-mock/flow.ts`(13단계 `runWorkConnectionFlow`)가 화면 버튼을 구동하고, HTTP `scripts/mock-domain/work-application-flow.mjs`(공개 Mock API + Hub API)가 크로스앱 계약을 스모크한다. 둘 다 hub-data service(createTemporaryMaster/approveMerge 등) + work-mock 스토어로 수렴(이슈26·27·29 이중 진입점 방침 연장).
+    *   **미검증(이슈30)**: Docker 미설치로 실제 work 스키마·RLS·크로스오리진(타 도메인 앱→Hub) 인증/CORS 는 미검증 — Phase 2 Work 연결에서. mock 은 globalThis 캐시라 hub 서버 프로세스 내에서만 상태 유지(재시작 시 리셋), 실행마다 새 프로그램·임시 마스터가 누적된다(고유 사업자번호 파생으로 회차 간 간섭 없음).
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

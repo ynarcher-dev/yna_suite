@@ -8,6 +8,7 @@ import {
   Search,
   Upload,
   Users,
+  Workflow,
 } from "lucide-react";
 import type { NavSection } from "@yna/ui";
 
@@ -38,5 +39,9 @@ export const HUB_NAV: NavSection[] = [
       { label: "Import Batch", href: "/import-batches", icon: Upload },
       { label: "감사 로그", href: "/audit-logs", icon: ScrollText },
     ],
+  },
+  {
+    title: "개발/검증",
+    items: [{ label: "도메인 연결 테스트", href: "/domain-test", icon: Workflow }],
   },
 ];

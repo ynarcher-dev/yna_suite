@@ -118,6 +118,7 @@ Hub
     List
     Detail
   Audit Logs
+  Domain Connection Test  (개발/검증 · staging/dev 전용, production 비활성화)
 ```
 
 Phase 1 필수:
@@ -132,6 +133,7 @@ Temporary Masters
 Merge Candidates
 Import Batches
 Audit Logs
+Domain Connection Test (Work 연결 Mock/Test Flow · api_contracts §19)
 ```
 
 ## 5. Y&A Dev IA

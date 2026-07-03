@@ -30,6 +30,23 @@
 
 ## 진행 기록
 
+### [2026-07-03] [기기: yna_suite dev] Phase 1.13 Work 연결 Mock/Test Flow
+*   **완료**:
+    *   **Work mock 데이터 계층**(`apps/hub/src/lib/work-mock/`): `types.ts`(WorkProgram/WorkProgramModule/WorkApplication/WorkActivity/WorkMeetingMinutes + WorkApplicationView[resolvedStartupId·merged] + FlowStep/FlowResult, WORK_MODULE_TYPES 10종·WORK_ACTIVITY_TYPES), `mock-store.ts`(globalThis `__ynaWorkMock` — program/module/application/activity/minutes mutation + `toApplicationView` 가 hub 마스터를 `@yna/database resolveMasterId` 로 최종 마스터 resolve, `findHubMaster` 는 참조 확인만·직접 수정 금지). Hub 마스터를 참조만 하고 변경하지 않는다.
+    *   **인프로세스 연결 flow**(`work-mock/flow.ts`): `runWorkConnectionFlow(actor, hasWorkWrite)` — 13단계(work 권한 확인→프로그램→모듈→기존 마스터 준비→검색·연결→유사 신규 임시 마스터[동일 사업자번호 강매칭→중복 후보]→신청2 연결→후보 확인→병합 승인→**신청 FK resolve 검증**[startupId 불변·resolved=target·merged]→custom activity→회의록·첨부→merge_event/audit 확인). 단계별 FlowStep 반환, 실패 시 중단. hub-data service(createTemporaryMaster/searchMasterCandidates/listMergeCandidates/approveMerge) 재사용.
+    *   **Mock Work API**(`app/api/mock/work/*`): `guard.ts`(`assertMockEnabled()` — production not_found·"staging/dev 만" + `requireWorkMockAccess` work read/write 직접 확인), `api-map.ts`(snake_case↔camel + module_type/activity_type 검증), 라우트 6종 — `POST/GET programs`, `POST programs/{id}/modules`, `POST/GET applications`, `GET applications/{id}`(resolved), `POST activities`, `POST meeting-minutes`. 공통 envelope(ok/error·request_id) 재사용.
+    *   **화면 `/domain-test`**(nav "개발/검증" 섹션 신설): 서버 컴포넌트(force-dynamic) + `actions.ts`(runFlowAction — 세션·work 권한·production 가드·revalidate) + `components/domain-test/domain-test-view.tsx`(실행 버튼·단계 결과 테이블·신청→최종 마스터 resolve 현황). 기획자가 1클릭으로 연결 계약을 눈으로 검증.
+    *   **HTTP 스모크 스크립트**(`scripts/mock-domain/work-application-flow.mjs`): 실행 중 Hub 서버에 대해 Mock Work API + Hub 마스터/병합 API 를 순서대로 호출·검증(cross-app 계약). BASE_URL 인자, 고유 사업자번호(Date.now 파생)로 회차 간 간섭 방지.
+*   **현재 상태**:
+    *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 master-data 24·permissions 29·utils 12 pass, `pnpm build`(hub/dev) 2/2(Mock Work API 6개 ƒ + `/domain-test` ƒ dynamic 등록). **hub 프로덕션 smoke**: 스크립트 13단계 전체 통과 — program(wp-1)·module·기존 마스터 A(TEMP-ST-2026-0093)·검색 hit·신청1 연결·신규 B(후보 1건 score 98)·신청2·후보 mc·승인(event me-2 sync completed)·**신청 FK resolve**(application2 `startup_id=st-new-94` 보존 · `resolved_startup_id=st-new-93` · `merged=true`)·activity·회의록/첨부·후보 approved. `/domain-test` 200(applications resolve 현황 렌더), 검증 400(name 누락)·not_found 404(없는 program)·invalid enum 400(module_type).
+    *   **미검증(이슈30)**: Docker 미설치로 실제 work 스키마·RLS·크로스오리진(타 도메인→Hub) 인증/CORS 는 미검증(Phase 2 Work 연결). work.* DB 테이블·마이그레이션은 이번에 만들지 않음(in-memory mock, Phase 2 에서 work 스키마 조회로 교체). mock 은 globalThis 캐시(hub 프로세스 내 유지·재시작 리셋).
+*   **다음 작업**: **Phase 1 완료 — Phase 2: Y&A Work 연결** 착수. Phase 1.13 은 Phase 1 의 마지막 개발 항목이며, 남은 것은 공통 게이트(§6)·Phase 1 완료 기준(§7)의 배포/RLS/E2E 검증(대부분 Docker·staging 필요). Phase 2 는 `apps/work` 실제 앱을 붙이고 이번 mock seam(`work-mock`)을 work 스키마 조회로 교체하며, 프로그램/모듈·신청·평가·멘토링·매칭·성과·외부 포털 권한을 순차 구현한다.
+*   **주의점**:
+    *   **신청 FK 는 절대 재기록하지 않는다**: 병합 후에도 `WorkApplication.startupId` 는 연결 시점 값(source)을 유지하고, 최종 마스터는 `resolveMasterId`(COALESCE(merged_into_id,id))로 조회 시 계산한다(§10.3 2단계 비동기). 이것이 "Hub 직접 수정 없이 신청 이력이 최종 마스터로 귀속"의 증명. Phase 2 에서 실제 FK 를 옮기는 백그라운드 워커를 붙여도 resolved view/helper 가 진행 중 조회를 커버한다.
+    *   **production 비활성화 + Dev 권한 우회 금지**: Mock API·화면 실행은 `NEXT_PUBLIC_APP_ENV==='production'` 에서 not_found, work 도메인 read/write 를 직접 확인(dev 폴백은 master 권한이라 통과). 실데이터에서는 RLS 가 최종 강제.
+    *   **실행마다 상태 누적**: 연결 테스트는 회차마다 새 프로그램·임시 마스터 A/B 를 만든다(고유 사업자번호 `9`+runSeq 파생으로 회차 간 후보 간섭 없음). 반복 실행해도 각 회차의 신청 resolve 는 그 회차 id 로 판정하므로 정확.
+    *   포트 3000 stale 서버 남으면 smoke 전 종료(이전 handoff 동일).
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.12 기존 스타트업 DB 마이그레이션 도구
 *   **완료**:
     *   **staging 스키마**(마이그레이션 `20260703210001_create_staging_import_tables.sql`): `staging.import_batches`(source_type·source_name·entity_type·is_dry_run·total/processed/failed·status[+archived]·started_by·started/finished/archived_at·summary jsonb)·`staging.startup_import_rows`(raw/mapped/normalized_payload·import_status·decision_kind·error_message·hub_entity_id FK·processed_at) + 인덱스. RLS: hub read/write(`dev.can_*_domain('hub')`), DELETE 정책 없음(rollback=archived UPDATE), service_role bypass. `docs/yna_suite_data_model.md` §11 DDL 에 `is_dry_run`·`archived_at`·`decision_kind` 동기화.

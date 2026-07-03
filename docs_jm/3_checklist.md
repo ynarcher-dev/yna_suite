@@ -238,15 +238,16 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] Import Batch 조회 화면**
     *   Hub `/import-batches`(목록·상태 필터·이관 실행 패널) + `/import-batches/[id]`(성공/실패 요약·신규/연결/후보 수·실패 사유별 건수·row 판정·rollback). 실행 패널은 hub write 권한 게이트.
 
-### [ ] Phase 1.13 Work 연결 Mock/Test Flow
+### [x] Phase 1.13 Work 연결 Mock/Test Flow
 *(근거: yna_suite_phase1_scope.md §11, yna_suite_api_contracts.md §19, yna_suite_existing_source_alignment.md)*
+> 진행: Hub 내부 "도메인 연결 테스트" 기능으로 구현 — `apps/hub/src/lib/work-mock`(program/module/application/activity/meeting_minutes mock 스토어 + 13단계 flow) + Mock Work API `/api/mock/work/*`(production 비활성화·work 권한 가드) + 화면 `/domain-test`(1클릭 실행·단계결과·신청 resolve 현황) + HTTP 스크립트 `scripts/mock-domain/work-application-flow.mjs`. 신청 FK 는 `@yna/database resolveMasterId` 로 최종 마스터 resolve(연결 id 불변·2단계 비동기 §10.3 증명). in-memory mock(work.* DB 테이블·마이그레이션 없음, Phase 2 Work 연결에서 교체). typecheck 10/10·lint 10/10·test(master-data 24·permissions 29·utils 12)·build 2/2 + hub smoke(스크립트 13단계 전체 통과: application2 startup_id=source 보존·resolved=target·merged=true, /domain-test 200, 검증 400·not_found 404·invalid enum 400). **무-Docker라 실제 work 스키마·RLS·크로스오리진은 미검증(이슈30).** (2026-07-03)
 
-*   **[ ] Program First 얇은 재현**
-    *   mock용 `work.programs / program_modules / applications / program_activities / meeting_minutes` 최소 구조 + mock API(production 비활성화).
-*   **[ ] 핵심 연결 시나리오 자동 검증**
-    *   work 권한 사용자 생성 → mock 프로그램·모듈 생성 → 기존 Hub 스타트업 검색·연결 → 유사 신규 임시 마스터 생성 → 중복 후보 생성 → 병합 승인 → **mock 신청 FK가 최종 마스터로 이동** 확인 → custom activity·회의록·첨부 연결 → audit/merge event 확인.
-*   **[ ] 검증 목적 확인**
-    *   Hub 마스터를 직접 수정하지 않고, 새 대상은 임시 마스터·병합 후보 흐름을 탄다는 계약이 실제로 작동하는지 확인. (실제 Work UI 완성이 아님)
+*   **[x] Program First 얇은 재현**
+    *   mock용 `work.programs / program_modules / applications / program_activities / meeting_minutes` 최소 구조 + mock API(production 비활성화). (in-memory `work-mock` 스토어 + `/api/mock/work/{programs,programs/{id}/modules,applications,applications/{id},activities,meeting-minutes}`, `assertMockEnabled()`로 production not_found + work read/write 가드.)
+*   **[x] 핵심 연결 시나리오 자동 검증**
+    *   work 권한 사용자 생성 → mock 프로그램·모듈 생성 → 기존 Hub 스타트업 검색·연결 → 유사 신규 임시 마스터 생성 → 중복 후보 생성 → 병합 승인 → **mock 신청 FK가 최종 마스터로 이동** 확인 → custom activity·회의록·첨부 연결 → audit/merge event 확인. (인프로세스 `runWorkConnectionFlow` 13단계가 화면 버튼 구동 + HTTP 스크립트가 공개 API 계약 스모크. 스모크 전체 통과.)
+*   **[x] 검증 목적 확인**
+    *   Hub 마스터를 직접 수정하지 않고, 새 대상은 임시 마스터·병합 후보 흐름을 탄다는 계약이 실제로 작동하는지 확인. (실제 Work UI 완성이 아님) (신청 `startup_id` 는 연결 시점 그대로 보존, 최종 마스터는 `resolveMasterId`(COALESCE)로 실시간 resolve — Hub 직접 수정 없이 병합 귀속 재현.)
 
 ---
 
