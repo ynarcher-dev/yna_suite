@@ -30,6 +30,15 @@
 
 ## 진행 기록
 
+### [2026-07-04] [기기: claude 원격 세션] Phase 1.14 설계 문서 정합성 보완
+*   **완료**:
+    *   **문서 교차 리뷰 36건 전부 보완**(`6_docs_review.md` 높음 4·중간 15·낮음 17): docs 15개 + docs_jm 3개 문서 수정. 기준 원칙 = "실구현 기준으로 공식 문서를 맞춘다". 기획자 방향 결정 4건(외부 사용자 지금은 잠금 / 임시 마스터 화면 신설 / 36건 전부 / 개인정보 삭제 절충안) 반영 — 상세는 4_memo 이슈31.
+    *   **`/temporary-masters` 화면 신설**(H4): `app/(app)/temporary-masters/page.tsx` + `components/temporary-masters/temporary-masters-table.tsx` + `listTemporaryMasters()`(service 순수 조합, TEMP·active 필터 + pending 후보 집계). functional_spec §14-1·§14-2 화면 명세 + §21 권한표 행 추가로 nav 404 해소.
+    *   **주요 문서 정정**: rls_policy_matrix(guest 잠금·management_office·resolve view), auth_permissions(request_id·can_read 강제), migration_strategy(DDL 동기화·실패 상태 4종·migrations 경로), data_model(work.* Phase 2·식별자 차등 unique·alias 삭제 예외·scope_type), master_data_policy(sync_status), tech_stack/design_system(네이티브 UI·staging 스키마), environment_deployment(COOKIE_DOMAIN·smoke 계정 10종·stg 표기), ci_cd(현 단계 브랜치 운영), foldering(루트명·migrations 단일 경로), api_contracts(on_hold·도메인별 role_key·alias 규칙·hold 서버액션), phase1_scope/planning/IA(격리 테스트 Phase 구분·7개 도메인·코드 포맷·보류 액션).
+*   **현재 상태**: typecheck/lint 20 태스크·단위 테스트 3패키지 통과, hub 빌드 + `/temporary-masters` 프로덕션 smoke 200(TEMP 마스터 렌더). 문서 후속 작업 3건은 문서 내 명시(식별자 부분 unique migration, experts.user_id migration, guest_expert 제출 방식 — 모두 Phase 2 전).
+*   **다음 작업**: Phase 2: Y&A Work 연결 착수(3_checklist §4). 공통 게이트·DoD 검증(Docker·staging 필요)은 별도 진행.
+*   **주의점**: guest 관련 RLS 매트릭스가 "Phase 1 잠금" 기준으로 바뀌었으므로, Phase 2 외부 포털 설계 시 rls_policy_matrix §6·§14 주의 블록의 선행 결정(템플릿 조정 vs 제출 RPC, experts.user_id)부터 처리할 것.
+
 ### [2026-07-03] [기기: yna_suite dev] Phase 1.13 Work 연결 Mock/Test Flow
 *   **완료**:
     *   **Work mock 데이터 계층**(`apps/hub/src/lib/work-mock/`): `types.ts`(WorkProgram/WorkProgramModule/WorkApplication/WorkActivity/WorkMeetingMinutes + WorkApplicationView[resolvedStartupId·merged] + FlowStep/FlowResult, WORK_MODULE_TYPES 10종·WORK_ACTIVITY_TYPES), `mock-store.ts`(globalThis `__ynaWorkMock` — program/module/application/activity/minutes mutation + `toApplicationView` 가 hub 마스터를 `@yna/database resolveMasterId` 로 최종 마스터 resolve, `findHubMaster` 는 참조 확인만·직접 수정 금지). Hub 마스터를 참조만 하고 변경하지 않는다.
@@ -40,7 +49,7 @@
 *   **현재 상태**:
     *   `pnpm typecheck` 10/10, `pnpm lint` 10/10, 단위 테스트 master-data 24·permissions 29·utils 12 pass, `pnpm build`(hub/dev) 2/2(Mock Work API 6개 ƒ + `/domain-test` ƒ dynamic 등록). **hub 프로덕션 smoke**: 스크립트 13단계 전체 통과 — program(wp-1)·module·기존 마스터 A(TEMP-ST-2026-0093)·검색 hit·신청1 연결·신규 B(후보 1건 score 98)·신청2·후보 mc·승인(event me-2 sync completed)·**신청 FK resolve**(application2 `startup_id=st-new-94` 보존 · `resolved_startup_id=st-new-93` · `merged=true`)·activity·회의록/첨부·후보 approved. `/domain-test` 200(applications resolve 현황 렌더), 검증 400(name 누락)·not_found 404(없는 program)·invalid enum 400(module_type).
     *   **미검증(이슈30)**: Docker 미설치로 실제 work 스키마·RLS·크로스오리진(타 도메인→Hub) 인증/CORS 는 미검증(Phase 2 Work 연결). work.* DB 테이블·마이그레이션은 이번에 만들지 않음(in-memory mock, Phase 2 에서 work 스키마 조회로 교체). mock 은 globalThis 캐시(hub 프로세스 내 유지·재시작 리셋).
-*   **다음 작업**: **Phase 1 완료 — Phase 2: Y&A Work 연결** 착수. Phase 1.13 은 Phase 1 의 마지막 개발 항목이며, 남은 것은 공통 게이트(§6)·Phase 1 완료 기준(§7)의 배포/RLS/E2E 검증(대부분 Docker·staging 필요). Phase 2 는 `apps/work` 실제 앱을 붙이고 이번 mock seam(`work-mock`)을 work 스키마 조회로 교체하며, 프로그램/모듈·신청·평가·멘토링·매칭·성과·외부 포털 권한을 순차 구현한다.
+*   **다음 작업**: **Phase 1 개발 항목 완료(단, 출시 게이트 미통과 상태) — Phase 2: Y&A Work 연결** 착수. Phase 1.13 은 Phase 1 의 마지막 개발 항목이며, §7 Definition of Done 11개 항목(배포/RLS/E2E 검증, 대부분 Docker·staging 필요)은 전부 미체크 — "개발 완료 ≠ Phase 1 완료"이며 출시 게이트는 별도로 통과해야 한다. Phase 2 는 `apps/work` 실제 앱을 붙이고 이번 mock seam(`work-mock`)을 work 스키마 조회로 교체하며, 프로그램/모듈·신청·평가·멘토링·매칭·성과·외부 포털 권한을 순차 구현한다.
 *   **주의점**:
     *   **신청 FK 는 절대 재기록하지 않는다**: 병합 후에도 `WorkApplication.startupId` 는 연결 시점 값(source)을 유지하고, 최종 마스터는 `resolveMasterId`(COALESCE(merged_into_id,id))로 조회 시 계산한다(§10.3 2단계 비동기). 이것이 "Hub 직접 수정 없이 신청 이력이 최종 마스터로 귀속"의 증명. Phase 2 에서 실제 FK 를 옮기는 백그라운드 워커를 붙여도 resolved view/helper 가 진행 중 조회를 커버한다.
     *   **production 비활성화 + Dev 권한 우회 금지**: Mock API·화면 실행은 `NEXT_PUBLIC_APP_ENV==='production'` 에서 not_found, work 도메인 read/write 를 직접 확인(dev 폴백은 master 권한이라 통과). 실데이터에서는 RLS 가 최종 강제.

@@ -224,6 +224,19 @@
     *   **자동 검증 이중 경로, 단일 오케스트레이션**: 인프로세스 `work-mock/flow.ts`(13단계 `runWorkConnectionFlow`)가 화면 버튼을 구동하고, HTTP `scripts/mock-domain/work-application-flow.mjs`(공개 Mock API + Hub API)가 크로스앱 계약을 스모크한다. 둘 다 hub-data service(createTemporaryMaster/approveMerge 등) + work-mock 스토어로 수렴(이슈26·27·29 이중 진입점 방침 연장).
     *   **미검증(이슈30)**: Docker 미설치로 실제 work 스키마·RLS·크로스오리진(타 도메인 앱→Hub) 인증/CORS 는 미검증 — Phase 2 Work 연결에서. mock 은 globalThis 캐시라 hub 서버 프로세스 내에서만 상태 유지(재시작 시 리셋), 실행마다 새 프로그램·임시 마스터가 누적된다(고유 사업자번호 파생으로 회차 간 간섭 없음).
 
+## 1-14. 설계 문서 정합성 보완 메모 (Phase 1.14, 2026-07-04)
+
+### 📌 이슈 31: 문서 교차 리뷰 36건 보완 — 4가지 방향 결정 + 임시 마스터 화면 신설 (작성일자: 2026-07-04)
+*   **상황**: docs 22개 + docs_jm 6개 교차 리뷰(`6_docs_review.md`)에서 문서 간 불일치 36건(높음 4·중간 15·낮음 17)이 발견되어 Phase 1.14 로 일괄 보완했다. 대부분은 "구현 중 결정이 공식 문서에 역반영되지 않은 드리프트"라 실구현 기준으로 문서를 맞췄고, 방향 결정이 필요한 4건은 기획자 확인을 받았다.
+*   **문제**: (1) 외부 사용자(guest) 권한이 권한표(hub None·work R)와 RLS 매트릭스(hub/평가 쓰기 허용)에서 충돌 — 어느 쪽이 맞는지 구현이 판단할 수 없음. (2) `/temporary-masters` 가 nav 링크만 있고 라우트가 없어 404. (3) 개인정보 완전 삭제 기준이 RLS(금지)와 백업 문서(법적 파기 허용)에서 상충. (4) migration_strategy 의 staging DDL 이 1.12 에서 보강된 data_model DDL 보다 낡아 그대로 구현하면 dry-run/rollback 불가.
+*   **해결** (기획자 결정 4건 반영):
+    *   **외부 사용자는 지금은 잠금**: Phase 1 은 외부 사용자 연결 + Hub/Dev 접근 차단까지만. RLS 매트릭스의 guest 쓰기 행을 "불가 — Phase 2 외부 포털에서 설계"로 정리하고, guest_expert 평가 제출의 두 가지 Phase 2 옵션(템플릿에 work write self 부여 vs 별도 제출 RPC)과 선행 조건(`hub.experts.user_id` 컬럼 migration)을 rls_policy_matrix §14 주의에 기록.
+    *   **임시 마스터 화면 신설**: `/temporary-masters` 라우트 + `TemporaryMastersTable`(엔티티 공통 TEMP·active 목록, 검색/엔티티 필터, pending 후보 수, 상세 링크). 서비스는 기존 목록 조회 + 후보 집계의 순수 조합(`listTemporaryMasters`)이라 store 코드 추가 없음. functional_spec 에 §14-1(임시 마스터)·§14-2(Hub 감사 로그) 화면 명세와 §21 권한표 행을 추가.
+    *   **개인정보 삭제는 절충안 명시**: 화면/API 경로는 물리 삭제 불가(RLS DELETE 없음) 유지, 법적 파기는 관리자 전용 운영 절차(migration/service role + 처리 기록)로만 — 두 문서(backup·database_operations·rls)에 "모순이 아니라 역할 분담"으로 상호 참조를 명시.
+    *   **DDL 기준 문서는 data_model**: migration_strategy 의 staging DDL 을 data_model §11 사본으로 동기화하고 "기준 문서는 data_model" 주석을 남김. import 실패 상태도 스키마 4종(pending/processed/failed/skipped)으로 정리(세부 유형은 error_message).
+    *   **남긴 후속 작업(문서에 명시)**: ① `master_identifiers` 일괄 unique 인덱스를 강한 식별자 한정 부분 인덱스로 교체하는 migration(약한 식별자 저장 시작 전, 늦어도 Phase 2 — data_model §4.6). ② `hub.experts.user_id` 컬럼 추가 migration(Phase 2 외부 전문가 포털 선행 — rls_policy_matrix §14). ③ guest_expert 평가 제출 방식 결정(Phase 2).
+    *   **검증**: typecheck/lint 20 태스크·단위 테스트 3패키지(utils/master-data/permissions) 통과, hub 프로덕션 빌드 + `/temporary-masters` smoke 200(TEMP-ST-2026-0092·TEMP-PT-2026-0044 렌더).
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.
