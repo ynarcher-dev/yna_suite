@@ -281,6 +281,13 @@ status
 별칭
 ```
 
+신규 생성:
+
+```txt
+전문가 신규 등록은 스타트업과 동일하게 공용 임시 마스터 생성 dialog를 사용한다
+(§10 — 자동완성 검색 → 기존 선택 또는 즉시 임시 생성). 별도 전용 등록 폼은 두지 않는다.
+```
+
 완료 기준:
 
 ```txt
@@ -310,6 +317,12 @@ status
 식별자
 별칭
 관련 Project/Fund/M&A 요약
+```
+
+신규 생성:
+
+```txt
+협력사 신규 등록도 공용 임시 마스터 생성 dialog를 사용한다(§10).
 ```
 
 완료 기준:
@@ -383,7 +396,9 @@ status 필터
 권한:
 
 ```txt
-master 또는 master_data_merge 권한
+hub write 권한 (구현: requireMergeAccess — 권한 모델은 도메인 read/write 토글만
+사용하므로 별도 세분 권한 없이 hub write + master 역할이 병합을 수행한다.
+세분 권한(master_data_merge)이 필요해지면 권한 모델 확장과 함께 도입한다.)
 외부 사용자 접근 불가
 ```
 
@@ -490,6 +505,71 @@ finished_at
 ```txt
 dry-run 결과 확인 가능
 실패 row 재처리 기준 확인 가능
+```
+
+## 14-1. 임시 마스터 목록
+
+목적:
+
+```txt
+정식 승격 전의 임시 마스터(TEMP 코드, verification_status='pending')를
+한곳에서 모아 검토한다. 도메인 유입/직접 생성/import로 쌓인 임시 마스터의
+정리(검증 승격, 중복 후보 처리)가 목적이다.
+```
+
+필수 컬럼:
+
+```txt
+master_code (TEMP-)
+entity_type (startup/expert/partner)
+name
+source_domain (유입 출처)
+pending 중복 후보 수
+created_at
+```
+
+기능:
+
+```txt
+entity_type 필터, 검색
+행 클릭 시 해당 마스터 상세로 이동
+중복 후보가 있으면 검토 화면으로 연결
+```
+
+완료 기준:
+
+```txt
+3종 엔티티의 임시 마스터가 한 화면에서 조회됨
+상세/중복 후보 검토로 자연스럽게 이어짐
+```
+
+## 14-2. 감사 로그 조회 (Hub)
+
+목적:
+
+```txt
+Hub 전체의 감사 로그(hub.audit_logs — 마스터 변경, 병합, 민감정보 원본 조회,
+import 실행 등)를 기본 조회한다. Dev의 권한 감사 로그(dev.permission_audit_logs)
+조회 화면은 §16 사용자 상세/전용 화면에서 별도 제공한다.
+```
+
+필수 컬럼:
+
+```txt
+발생 시각
+actor
+entity_type / entity_id
+action
+reason
+request_id
+```
+
+기능:
+
+```txt
+검색, 엔티티/작업 필터
+before/after 상세(민감필드 마스킹 스냅샷)
+로그 수정/삭제 불가(append-only)
 ```
 
 ## 15. Dev 사용자 목록
@@ -640,12 +720,16 @@ scope_type=self
 배정된 evaluation/mentoring 기준 접근
 ```
 
-완료 기준:
+완료 기준 (Phase 구분 주의):
 
 ```txt
-외부 사용자는 Hub/Dev 직접 접근 불가
-자기 회사/자기 배정 데이터만 조회
-타사/타인 데이터 접근 실패 테스트 통과
+Phase 1 (연결/차단만 검증):
+  외부 사용자 계정을 마스터에 연결할 수 있다
+  외부 사용자는 Hub/Dev 직접 접근 불가 (차단 테스트 통과)
+
+Phase 2 (외부 포털 — yna_suite_phase1_scope.md §12 범위):
+  자기 회사/자기 배정 데이터만 조회 (scope 격리)
+  타사/타인 데이터 접근 실패 테스트 통과
 ```
 
 ## 20. Work 연결 Mock/Test 화면 또는 Script
@@ -723,6 +807,8 @@ production에서는 mock 기능 비활성화
 | Master List | hub read | 생성 버튼 |
 | Master Detail | hub read | 수정/식별자/별칭 |
 | Merge Candidates | merge 권한 | 승인/반려 |
+| Temporary Masters | hub read | 없음 (액션은 상세/검토 화면에서) |
+| Audit Logs (Hub) | hub read | 없음 (append-only) |
 | Import Batches | hub/admin | 재처리 |
 | Dev Users | dev read | 초대/수정 |
 | Permission Matrix | dev read | 권한 변경 |
