@@ -51,6 +51,8 @@ DB migration 포함 PR은 별도 라벨 부여
 
 소규모 팀에서는 `develop` 없이 `main + feature/* + preview` 방식도 가능하다. 단, staging 배포 기준은 반드시 유지한다.
 
+> **현 단계(Phase 1~2, 1인 개발) 운영 방식**: 위 소규모 예외를 적용한다. 단위 작업마다 즉시 commit & push하는 작업 규칙(`docs_jm/2_rules.md`)은 feature 브랜치 위에서의 커밋 습관을 말하며, main 반영은 PR merge를 기본으로 한다(급한 문서 수정 등 경미한 변경은 main 직접 push 허용). 협업 인원이 늘어나는 시점부터 위 운영 규칙(PR 필수·리뷰어 지정)을 전면 적용한다.
+
 ## 3. PR 필수 체크
 
 모든 PR은 다음을 통과해야 한다.

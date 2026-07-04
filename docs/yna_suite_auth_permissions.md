@@ -138,7 +138,7 @@ CREATE TABLE dev.user_permissions (
 );
 ```
 
-`can_write = true`이면 일반적으로 `can_read = true`도 함께 부여한다.
+`can_write = true`이면 `can_read = true`를 강제한다. (구현: 권한 저장 시 `normalizePermission`이 자동 보정 — `packages/permissions`)
 
 ## 5. 데이터 Scope 모델
 
@@ -429,6 +429,7 @@ CREATE TABLE dev.permission_audit_logs (
     before_value JSONB NULL,
     after_value JSONB NULL,
     reason TEXT NULL,
+    request_id TEXT NULL, -- 동일 요청 상관관계 ID (req_<uuid>) — Phase 1.11 추가
     created_at TIMESTAMPTZ DEFAULT now()
 );
 ```

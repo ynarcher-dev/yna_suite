@@ -173,7 +173,9 @@ audit log 기록
 | soft delete | status/deleted_at 처리 | 일반 삭제 |
 | masking | 일부 문자 비식별화 | 목록/리포트 |
 | anonymization | 개인 식별 불가 형태로 변환 | 통계 보존 |
-| physical delete | 물리 삭제 | 법적/보안상 완전 삭제 필요 |
+| physical delete | 물리 삭제 | 법적/보안상 완전 삭제 필요 (아래 주의 참고) |
+
+> physical delete 주의: RLS 정책상 화면/API 경로로는 hub 마스터의 물리 삭제가 불가능하다(`yna_suite_rls_policy_matrix.md` §6 — DELETE 정책 없음). 법적 파기가 필요한 경우에만 관리자가 별도 운영 절차(migration 또는 service role 스크립트 + 처리 기록)로 수행한다. 두 문서는 모순이 아니라 "일상 경로 금지 / 법적 파기는 별도 절차"의 역할 분담이다.
 
 개인정보 삭제 요청 처리:
 

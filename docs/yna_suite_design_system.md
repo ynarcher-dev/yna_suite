@@ -312,6 +312,8 @@ Top Appbar + Drawer Navigation + Content
 
 공통 컴포넌트는 `packages/ui`에서 관리한다.
 
+> 구현 방침(Phase 1.5 확정, 이슈20): 외부 UI 패키지(Radix/TanStack Table 등) 없이 **네이티브로 직접 구현**한다. 인터랙티브 컴포넌트는 실제 소비 화면이 생기는 Phase에 그때그때 추가한다 — Phase 1 종료 시점 기준 Select/Switch/Table/ConfirmDialog는 네이티브로 구현되었고, SearchCombobox(MasterSearchPicker로 대체 구현)/DatePicker(datetime-local 사용)/Sheet/Popover/Tooltip/DataTable은 아직 없다. 복잡한 접근성·가상 스크롤 요구가 생기면 외부 패키지 도입을 재검토한다.
+
 ```txt
 packages/ui/
   components/
@@ -347,25 +349,25 @@ packages/ui/
     globals.css
 ```
 
-필수 컴포넌트:
+필수 컴포넌트 (구현 시점은 실제 소비 Phase 기준 — 위 구현 방침 참고):
 
 ```txt
-Button
-IconButton
-Input
-Select
-SearchCombobox
-DatePicker
-Dialog
-Sheet
-DataTable
-FilterBar
-StatusBadge
-PermissionBadge
-PageHeader
-EmptyState
-ConfirmDialog
-BulkActionBar
+Button          (구현됨)
+IconButton      (구현됨)
+Input           (구현됨)
+Select          (구현됨 — 네이티브)
+SearchCombobox  (MasterSearchPicker로 대체 구현 — 검색 API 디바운스 자동완성)
+DatePicker      (미구현 — datetime-local 입력 사용 중, 필요 시 추가)
+Dialog          (구현됨 — 네이티브)
+Sheet           (미구현 — 소비 화면 생기면 추가)
+DataTable       (미구현 — 네이티브 Table로 대응 중, 정렬/가상스크롤 필요 시 추가)
+FilterBar       (구현됨)
+StatusBadge     (구현됨)
+PermissionBadge (구현됨)
+PageHeader      (구현됨)
+EmptyState      (구현됨)
+ConfirmDialog   (구현됨 — 네이티브)
+BulkActionBar   (구현됨)
 ```
 
 Y&A 특화 컴포넌트 (비즈니스 결합형):

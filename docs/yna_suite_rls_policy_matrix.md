@@ -46,7 +46,7 @@ service role 우회는 서버 전용 작업에만 허용
 | `guest_expert` | 외부 전문가 |
 | `guest_startup` | 참가 스타트업 |
 | `viewer` | 제한적 읽기 전용 |
-| `no_permission` | 테스트용 권한 없음 |
+| `no_permission` | 테스트용 권한 없음 (권한 템플릿이 아님 — `dev.user_permissions` row가 없는 계정 상태를 가리키며, RLS 차단 테스트 용도로만 사용한다) |
 
 역할은 기본 템플릿이며, 실제 접근은 `dev.user_permissions`의 도메인 권한과 scope를 함께 판단한다.
 
@@ -149,8 +149,9 @@ work.can_read_program(program_id uuid)
 work.can_write_program(program_id uuid)
 work.can_read_activity(activity_id uuid)
 work.can_write_activity(activity_id uuid)
-hub.resolve_merged_master(entity_type text, entity_id uuid)
 ```
+
+병합 resolve는 DB 함수 대신 **`hub.resolved_startups` / `hub.resolved_experts` / `hub.resolved_partners` view + `packages/database`의 `resolveMasterId` helper**를 사용한다(Phase 1.10 구현 기준, `yna_suite_data_model.md` §5 참고).
 
 주의:
 
@@ -180,8 +181,8 @@ hub.partners
 | `master` | 전체 | 허용 | 허용 | soft delete만 |
 | 내부 `hub:read` | active 중심 전체 | 불가 | 불가 | 불가 |
 | 내부 `hub:write` | 전체 | 허용 | 허용 | soft delete만 |
-| `guest_startup` | 자기 회사 제한 필드 | 제한적 불가 또는 별도 view | 자기 제출 일부만 | 불가 |
-| `guest_expert` | 배정 업무에 연결된 최소 정보 | 불가 | 불가 | 불가 |
+| `guest_startup` | 불가 (Phase 2에서 별도 view로 자기 회사 제한 필드 제공 예정) | 불가 | 불가 (Phase 2에서 자기 제출 항목만 별도 RPC/제출 흐름으로 설계 예정) | 불가 |
+| `guest_expert` | 불가 (Phase 2에서 배정 업무에 연결된 최소 정보만 별도 view로 제공 예정) | 불가 | 불가 | 불가 |
 | 권한 없음 | 불가 | 불가 | 불가 | 불가 |
 
 RLS 기준:
@@ -189,7 +190,6 @@ RLS 기준:
 ```txt
 SELECT:
   dev.can_read_domain('hub')
-  OR work scope를 통해 자기 데이터에 연결된 제한 view
 
 INSERT/UPDATE:
   dev.can_write_domain('hub')
@@ -197,13 +197,18 @@ INSERT/UPDATE:
 DELETE:
   물리 삭제 금지
   status 변경만 허용
+  (법적 개인정보 파기는 화면/API 경로가 아닌 관리자 전용 운영 절차로만 수행 —
+   yna_suite_backup_retention_privacy.md §"삭제 유형" 참고)
 ```
 
 외부 사용자 주의:
 
 ```txt
-외부 사용자는 hub.startups 전체 테이블을 직접 SELECT하지 않는다.
-필요하면 별도 view/API에서 허용 필드만 제공한다.
+외부 사용자(guest_startup/guest_expert)는 권한 템플릿상 hub 도메인이 None이므로
+Phase 1에서는 hub 테이블에 일절 접근하지 않는다.
+Phase 2 외부 포털에서 자기 데이터 조회/제출이 필요해지면
+hub 테이블 직접 접근이 아니라 별도 view/RPC로 허용 필드만 제공한다.
+(외부 사용자는 hub.startups 전체 테이블을 직접 SELECT하지 않는다.)
 ```
 
 ## 7. Hub 관리자/심사역 테이블
@@ -219,7 +224,7 @@ hub.managers
 | 사용자 | SELECT | INSERT/UPDATE |
 | :--- | :--- | :--- |
 | `master` | 전체 | 허용 |
-| `management_office` | 전체 또는 HR scope | 허용 |
+| `management_office` | 전체 또는 HR scope | 불가 (hub는 read 권한이므로 — 인사 정보 관리는 management 도메인의 `management.hrm_records`에서 수행하고, `hub.managers` 수정은 hub write 권한자가 담당) |
 | 내부 사용자 | 제한된 프로필 조회 | 불가 |
 | 외부 사용자 | 배정 업무의 담당자 표시명 수준 | 불가 |
 
@@ -446,19 +451,31 @@ work.mentoring_sessions
 | 사용자 | SELECT | INSERT/UPDATE |
 | :--- | :--- | :--- |
 | 내부 `work:write` | scope 내 | 허용 |
-| `guest_expert self` | 본인 배정 건 | 본인 작성 가능 필드 |
+| `guest_expert self` | 본인 배정 건 | 불가 — Phase 2에서 설계 (아래 주의 참고) |
 | `guest_startup company` | 자기 회사 관련 공개 일정 | 제한 |
 
 RLS 기준:
 
 ```txt
-guest_expert:
+guest_expert (SELECT):
   evaluator_user_id = auth.uid()
-  OR expert_id가 auth.uid()와 연결된 hub.experts.id
 
 guest_startup:
   startup_id = scope_id
   단, 내부 점수/메모는 별도 view/API로 숨김
+```
+
+주의 (Phase 2 선행 결정 사항):
+
+```txt
+외부 전문가의 평가/의견 제출은 Phase 2 외부 전문가 포털에서 설계한다.
+현재 guest_expert 템플릿은 work=read이므로 can_write 기반 RLS로는 쓰기가 불가하다.
+Phase 2에서 아래 둘 중 하나를 선택해 권한표와 RLS를 함께 갱신한다:
+  1) guest_expert에 work write(scope=self)를 부여하고 본인 작성 필드만 허용
+  2) 쓰기는 별도 제출 RPC(SECURITY DEFINER)로만 받고 템플릿은 read 유지
+또한 expert_id 기반 self 판정에는 hub.experts와 auth 계정의 연결 컬럼
+(hub.experts.user_id)이 필요한데 현재 데이터 모델에 없다 —
+Phase 2에서 컬럼 추가 migration이 선행되어야 한다(evaluator_user_id 기반 판정은 가능).
 ```
 
 ## 15. Work 활동/회의록

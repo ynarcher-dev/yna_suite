@@ -89,19 +89,22 @@ CREATE SCHEMA staging;
 
 CREATE TABLE staging.startup_import_rows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- import row ID
-    import_batch_id UUID NOT NULL,                             -- 같은 파일/작업을 묶는 batch ID
+    import_batch_id UUID NOT NULL REFERENCES staging.import_batches(id), -- 같은 파일/작업을 묶는 batch ID
     source_name TEXT NOT NULL,                                 -- 원본 파일명/시스템명
     source_row_number INTEGER NULL,                            -- 원본 row 번호
     raw_payload JSONB NOT NULL,                                -- 원본 row 전체
     mapped_payload JSONB NULL,                                 -- 표준 컬럼으로 매핑한 값
     normalized_payload JSONB NULL,                             -- 검색/비교용 정규화 값
     import_status VARCHAR(50) DEFAULT 'pending',               -- pending/processed/failed/skipped
+    decision_kind VARCHAR(50) NULL,                            -- connect/new_master/candidate/failed(판정 결과)
     error_message TEXT NULL,                                   -- 실패 사유
-    hub_entity_id UUID NULL,                                   -- 생성/연결된 hub.startups.id
+    hub_entity_id UUID NULL REFERENCES hub.startups(id),        -- 생성/연결된 hub.startups.id
     created_at TIMESTAMPTZ DEFAULT now(),
     processed_at TIMESTAMPTZ NULL
 );
 ```
+
+> DDL 기준 문서는 `yna_suite_data_model.md` §11이다. 이 문서의 DDL은 그 사본이며, 변경 시 두 문서를 함께 갱신한다. (Phase 1.12에서 `decision_kind` 추가)
 
 staging 테이블은 운영 DB에 오래 남길 수도 있고, 별도 보관 정책에 따라 archive할 수도 있다.
 
@@ -115,16 +118,20 @@ CREATE TABLE staging.import_batches (
     source_type VARCHAR(50) NOT NULL,                         -- db/csv/xlsx/google_sheet/manual
     source_name TEXT NOT NULL,                                -- 원본 이름
     entity_type VARCHAR(50) NOT NULL,                         -- startup/expert/partner/application 등
+    is_dry_run BOOLEAN NOT NULL DEFAULT FALSE,                 -- dry-run(운영 미반영) 여부
     total_rows INTEGER DEFAULT 0,
     processed_rows INTEGER DEFAULT 0,
     failed_rows INTEGER DEFAULT 0,
-    status VARCHAR(50) DEFAULT 'pending',                     -- pending/running/completed/failed/partial
+    status VARCHAR(50) DEFAULT 'pending',                     -- pending/running/completed/failed/partial/archived
     started_by UUID REFERENCES auth.users(id),
     started_at TIMESTAMPTZ DEFAULT now(),
     finished_at TIMESTAMPTZ NULL,
+    archived_at TIMESTAMPTZ NULL,                              -- rollback(비활성화) 시각
     summary JSONB DEFAULT '{}'::jsonb
 );
 ```
+
+> Phase 1.12에서 `is_dry_run`(§16 dry-run), `archived_at`·status `archived`(§15 rollback)를 추가했다. DDL 기준 문서는 `yna_suite_data_model.md` §11.
 
 batch를 두는 이유:
 
@@ -213,7 +220,7 @@ HTTPS://www.alpha.co.kr/about -> alpha.co.kr
   신규 임시 또는 정식 마스터 생성
 
 필수값 누락:
-  failed 또는 needs_review 처리
+  failed 처리 (error_message에 누락 항목 기록, 검토 후 재처리)
 ```
 
 스타트업의 경우 사업자번호가 없어도 생성 가능해야 한다.
@@ -304,14 +311,18 @@ reasons = ["normalized_name_similar", "representative_name_match"]
 
 마이그레이션 중 실패한 row는 버리지 않는다.
 
-실패 상태:
+상태 컬럼(`import_status`)은 스키마 기준 4종만 사용한다:
 
 ```txt
-failed
-needs_review
-skipped
-duplicate_blocked
-invalid_format
+pending / processed / failed / skipped
+```
+
+세부 실패 유형은 상태값이 아니라 `error_message`(실패 사유)에 기록한다:
+
+```txt
+필수값 누락 (needs review)
+형식 오류 (invalid format)
+동일한 강한 식별자가 여러 마스터에 존재 (duplicate blocked)
 ```
 
 실패 row에는 다음을 남긴다.
@@ -417,9 +428,10 @@ packages/master-data/
   match/
   merge-candidate/
 
-supabase/schemas/staging/
-  import_batches.sql
-  startup_import_rows.sql
+supabase/migrations/
+  20260703210001_staging_import_tables.sql 등
+  (staging 테이블도 다른 스키마와 동일하게 migration 파일로만 관리 —
+   yna_suite_database_operations.md §2 Migration Only 원칙)
 ```
 
 주의:

@@ -207,6 +207,16 @@ service role을 사용하는 작업은 가능한 한 audit log를 남긴다.
 
 Y&A Suite는 물리 삭제보다 soft delete를 우선한다.
 
+예외:
+
+```txt
+경량 부속 레코드(hub.master_aliases 등)는 잘못 등록된 항목 정리를 위해
+물리 삭제(DELETE)를 허용한다. 마스터 본체·업무 데이터·감사 로그에는 적용하지 않는다.
+
+법적 개인정보 파기(physical delete)는 화면/API 경로가 아니라
+관리자 전용 운영 절차로만 수행한다 — yna_suite_backup_retention_privacy.md §7 참고.
+```
+
 권장:
 
 ```txt
