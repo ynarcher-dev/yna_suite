@@ -369,7 +369,8 @@ Program First 구조
 성과관리
 커스터마이즈 행사/activity
 가벼운 회의록/첨부파일
-외부 스타트업/전문가 권한 검증
+외부 스타트업/전문가 권한 검증 (self/company scope 격리 테스트 —
+  Phase 1은 외부 사용자 연결과 Hub/Dev 접근 차단까지만 검증한다)
 ```
 
 Phase 2에서 검증할 핵심:
@@ -424,13 +425,15 @@ Hub 스타트업/전문가/협력사 마스터 등록 가능
 병합 이벤트와 감사 로그가 남음
 Work 연결 mock/test flow 통과
 공통 디자인 시스템이 Hub/Dev 주요 화면에 적용됨
+권한 없는 사용자 차단 및 외부 사용자 Hub/Dev 접근 차단 테스트 통과
+  (외부 사용자의 self/company scope 격리 검증은 Phase 2 — §12 참고)
 staging에서 smoke test 통과
 production 배포 절차 문서화
 ```
 
 ## 15. 구현 순서 제안
 
-Phase 1 구현 순서는 다음을 권장한다.
+Phase 1 구현 순서는 다음을 권장한다. (실제 진행은 `docs_jm/3_checklist.md` 기준 — import 도구는 감사 로그 뒤(Phase 1.12)에 구현했다. 권장 순서와 다르지만 의존성 위반은 아니다.)
 
 ```txt
 1. 모노레포 스캐폴딩

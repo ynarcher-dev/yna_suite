@@ -18,7 +18,7 @@ import type { EntityType } from "@yna/core";
 import type { AuditLogListItem } from "@/lib/hub-data/types";
 
 /**
- * Hub 공통 감사 로그 조회. (근거: functional_spec §16, api_contracts §5, data_model §12)
+ * Hub 공통 감사 로그 조회. (근거: functional_spec §14-2, api_contracts §5, data_model §12)
  * 로그는 수정/삭제 불가(조회 전용)이며, before/after 는 민감 필드가 마스킹된 스냅샷이다(개인정보 원문 미저장).
  */
 const ACTIONS = [

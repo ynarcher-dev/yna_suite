@@ -433,9 +433,10 @@ DELETE /api/hub/aliases/{alias_id}
 규칙:
 
 ```txt
-alias는 삭제보다 inactive 상태를 우선 검토한다.
+alias는 경량 부속 레코드로서 물리 삭제(DELETE)를 허용한다
+(soft delete 우선 원칙의 예외 — yna_suite_data_model.md §4.5 삭제 정책 참고).
 검색에는 normalized_value를 사용한다.
-대표값에서 밀려난 이름은 alias로 보존한다.
+대표값에서 밀려난 이름은 alias로 보존한다(보존이 목적이면 삭제하지 않는다).
 ```
 
 ## 12. 중복 후보 조회
@@ -452,7 +453,7 @@ Query:
 | 이름 | 설명 |
 | :--- | :--- |
 | `entity_type` | startup/expert/partner |
-| `status` | pending/approved/rejected/ignored/expired |
+| `status` | pending/approved/rejected/ignored/expired/on_hold |
 | `min_score` | 최소 점수 |
 
 목록 응답 item:
@@ -594,6 +595,8 @@ POST /api/hub/merge-candidates/{candidate_id}/reject
 POST /api/hub/merge-candidates/{candidate_id}/ignore
 ```
 
+> 보류(on_hold)는 HTTP 엔드포인트를 두지 않는다 — Hub 검토 화면의 서버 액션 전용이다(Phase 1.10 결정, 이슈27). 외부/도메인 앱이 후보를 보류시킬 일은 없고, 조회는 §12의 `status=on_hold` 필터로 가능하다.
+
 요청:
 
 ```json
@@ -626,15 +629,16 @@ GET /api/dev/me/permissions
   "ok": true,
   "data": {
     "user_id": "uuid",
-    "role_key": "business_team",
     "domains": {
       "hub": {
+        "role_key": "business_team",
         "can_read": true,
         "can_write": false,
         "scope_type": "global",
         "scope_id": null
       },
       "work": {
+        "role_key": "business_team",
         "can_read": true,
         "can_write": true,
         "scope_type": "department",
@@ -644,6 +648,8 @@ GET /api/dev/me/permissions
   }
 }
 ```
+
+> `role_key`는 `dev.user_permissions`의 PK가 (user_id, domain_name)이므로 **도메인별 값**이다. 템플릿을 일괄 적용하면 전 도메인이 같은 값을 갖지만, 개별 override가 가능하므로 응답에서도 도메인 단위로 내려준다.
 
 권한:
 

@@ -253,6 +253,8 @@ CREATE TABLE hub.master_aliases (
 );
 ```
 
+> 삭제 정책: alias는 마스터 본체와 달리 **경량 부속 레코드로서 물리 삭제(DELETE)를 허용**한다(soft delete 우선 원칙의 예외 — `yna_suite_database_operations.md` §8 참고). 잘못 등록된 alias 정리가 목적이며, 대표값에서 밀려난 이름의 보존은 삭제가 아니라 alias 유지로 달성한다.
+
 예시:
 
 ```txt
@@ -284,12 +286,27 @@ CREATE TABLE hub.master_identifiers (
 );
 ```
 
-권장 unique:
+unique 정책 — 식별자 유형에 따라 다르게 적용한다(`yna_suite_master_data_policy.md` §3, `yna_suite_api_contracts.md` §10 참고):
+
+```txt
+공식/강한 식별자 (business_number, corporate_number 등):
+  전역 unique — 같은 정규화 값이 두 마스터에 존재할 수 없다.
+
+약한/중복 가능 단서 (team_name, applicant_email, founder_phone 등):
+  전역 unique 제외 — 동명 팀, 동일 신청자 이메일이 서로 다른 마스터에
+  존재할 수 있으므로 unique가 아니라 중복 후보 생성의 재료로만 쓴다.
+```
 
 ```sql
+-- 목표 형태: 강한 식별자만 부분(unique partial) 인덱스
 CREATE UNIQUE INDEX master_identifiers_unique_idx
-ON hub.master_identifiers (entity_type, identifier_type, normalized_value); -- 같은 종류의 식별자 중복 등록 방지
+ON hub.master_identifiers (entity_type, identifier_type, normalized_value)
+WHERE identifier_type IN ('business_number', 'corporate_number');
 ```
+
+> 현행 마이그레이션(`20260703171003`)은 전 유형 일괄 unique로 생성되어 있다.
+> 약한 식별자 유형을 실제로 저장하기 시작하는 시점(늦어도 Phase 2) 전에
+> 위 부분 인덱스로 교체하는 후속 migration이 필요하다.
 
 ### 4.7 `hub.master_field_history`
 
@@ -431,7 +448,7 @@ CREATE TABLE dev.user_permissions (
     role_key VARCHAR(50) NOT NULL,                           -- master/business_team 등 역할 템플릿
     can_read BOOLEAN DEFAULT FALSE,                          -- 해당 도메인 조회 가능 여부
     can_write BOOLEAN DEFAULT FALSE,                         -- 해당 도메인 생성/수정 가능 여부
-    scope_type VARCHAR(50) DEFAULT 'none',                   -- global/self/company/program 등 데이터 범위
+    scope_type VARCHAR(50) DEFAULT 'none',                   -- none/global/department/program/project/fund/company/self (yna_suite_auth_permissions.md §5)
     scope_id UUID NULL,                                      -- scope가 특정 자원을 가리킬 때의 대상 ID
     expires_at TIMESTAMPTZ NULL,                             -- 임시 권한 만료 시각
     created_at TIMESTAMPTZ DEFAULT now(),                    -- 권한 생성 시각
@@ -1152,7 +1169,7 @@ staging.import_batches
 staging.startup_import_rows
 ```
 
-Phase 1 Work 연결 계약/mock 검증:
+Phase 1 Work 연결 계약/mock 검증 (아래 5종은 Phase 1에서 **DB 테이블을 만들지 않는다** — in-memory mock으로 계약만 검증하고, 실제 테이블/마이그레이션은 Phase 2 Work 연결에서 생성한다. `yna_suite_api_contracts.md` §19 참고):
 
 ```txt
 work.programs

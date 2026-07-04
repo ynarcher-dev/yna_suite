@@ -147,7 +147,7 @@ preview deployments
 
 ```txt
 production은 고정 도메인만 허용한다.
-staging은 stg- 접두사를 사용한다.
+staging은 `*.stg.ynarcher.co.kr` 서브도메인 패턴을 사용한다(위 목록 기준 — `stg-hub.…` 같은 접두사 방식이 아님. Auth callback allowlist 등록 시 혼동 주의).
 preview URL은 인증 callback이 필요한 기능 검증에 제한이 있을 수 있다.
 ```
 
@@ -162,6 +162,8 @@ NEXT_PUBLIC_APP_DOMAIN
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_AUTH_REDIRECT_URL
+NEXT_PUBLIC_COOKIE_DOMAIN      ← 선택값. 서브도메인 간 SSO 세션 공유용 쿠키 도메인
+                                 (예: .ynarcher.co.kr — Phase 1.4 추가, 미설정 시 호스트 기본값)
 ```
 
 예시:
@@ -374,9 +376,8 @@ DB 변경은 `supabase/migrations`에서 관리한다.
 
 ```txt
 supabase/
-  migrations/
-  schemas/
-  policies/
+  config.toml
+  migrations/   ← 테이블/RLS 포함 모든 DB 변경의 단일 관리 경로
   seed/
 ```
 
@@ -485,16 +486,19 @@ RLS 차단 정상
 공통 UI 로딩 정상
 ```
 
-앱별 smoke test 계정:
+앱별 smoke test 계정 (RLS 테스트 계정 10종과 동일 — `yna_suite_ci_cd_release_process.md` §"테스트 계정" 기준):
 
 ```txt
 master
 executive
-business_team
+management_office
 investment_team
+business_team
 guest_expert
 guest_startup
 viewer
+no_permission
+expired_permission
 ```
 
 ## 19. 체크리스트

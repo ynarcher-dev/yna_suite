@@ -44,7 +44,7 @@
 *   **규칙**: 사용자 목록, 이메일, 전화번호, 대표자 정보 등 개인 식별이 가능한 정보는 **목록 화면에서 기본적으로 별표(Masking) 처리**합니다.
 *   **실천**:
     *   전화번호: `010-****-5678` 형태로 중간 자리를 가립니다.
-    *   이메일: `hong***@example.com` 형태로 아이디 뒤쪽을 가립니다.
+    *   이메일: `h***@example.com` 형태로 첫 글자만 남기고 아이디를 가립니다. (`docs/yna_suite_security_policy.md` 기준·실구현 `@yna/utils` 마스킹과 동일)
     *   상세 권한이 있는 담당자만 '상세 보기' 클릭 시에 감사 로그를 남기고 원본 정보를 볼 수 있습니다.
 
 ---
@@ -69,7 +69,7 @@
 ---
 
 ## 7. 상세 개발 및 코드 작성 규칙 준수
-* **규칙**: 실제 코드 구현 시에는 [docs/yna_suite_maintenance_rules.md](file:///c:/dev/yna_suite/docs/yna_suite_maintenance_rules.md)에 기술된 코드 유지보수 및 파일 크기 제한 규칙을 반드시 준수합니다.
+* **규칙**: 실제 코드 구현 시에는 [docs/yna_suite_maintenance_rules.md](../docs/yna_suite_maintenance_rules.md)에 기술된 코드 유지보수 및 파일 크기 제한 규칙을 반드시 준수합니다.
 * **주요 코드 크기 제한**:
   * 단일 수동 작성 파일: **500줄 이하**
   * 단일 React 컴포넌트: **250줄 이하**
@@ -77,15 +77,15 @@
   * 단일 Hook: **150줄 이하**
 * **실천**:
   * 파일이나 컴포넌트가 위 기준을 초과하는 경우, 임의로 코드를 계속 덧붙이지 않고 **Hook, Component, Actions, Columns, Schema, Service/Helper** 등으로 로직을 분리합니다.
-  * 자세한 분리 예시와 패키지 간 의존성 규칙은 [docs/yna_suite_maintenance_rules.md](file:///c:/dev/yna_suite/docs/yna_suite_maintenance_rules.md)를 참고하십시오.
+  * 자세한 분리 예시와 패키지 간 의존성 규칙은 [docs/yna_suite_maintenance_rules.md](../docs/yna_suite_maintenance_rules.md)를 참고하십시오.
 
 ---
 
 ## 8. AI/바이브 코딩(Vibe Coding) 협업 및 정합성 규칙
 *   **규칙**: AI 에이전트를 이용한 바이브 코딩 시 발생할 수 있는 컨텍스트 누수, 코드 비대화, 설계 괴리 등의 부작용을 방지하기 위해 **다음 5가지 수칙을 철저히 준수**합니다.
 *   **실천**:
-    1.  **시작 진입점 준수**: AI는 새 작업을 시작할 때 반드시 [0_CLAUDE.md](file:///c:/dev/yna_suite/docs_jm/0_CLAUDE.md)를 진입점으로 삼아 현재 Phase와 관련 설계 문서를 먼저 로드하고 시작해야 합니다.
-    2.  **체크리스트 및 진척도 실시간 동기화**: 매 단위 작업 완료 시 [3_checklist.md](file:///c:/dev/yna_suite/docs_jm/3_checklist.md)와 [5_progress.md](file:///c:/dev/yna_suite/docs_jm/5_progress.md)를 즉시 업데이트하고 커밋하여, 대화 세션이 초기화되거나 기기를 이동하더라도 AI가 맥락을 즉시 이어받을 수 있게 합니다.
+    1.  **시작 진입점 준수**: AI는 새 작업을 시작할 때 반드시 [0_CLAUDE.md](./0_CLAUDE.md)를 진입점으로 삼아 현재 Phase와 관련 설계 문서를 먼저 로드하고 시작해야 합니다.
+    2.  **체크리스트 및 진척도 실시간 동기화**: 매 단위 작업 완료 시 [3_checklist.md](./3_checklist.md)와 [5_progress.md](./5_progress.md)를 즉시 업데이트하고 커밋하여, 대화 세션이 초기화되거나 기기를 이동하더라도 AI가 맥락을 즉시 이어받을 수 있게 합니다.
     3.  **임의 의존성(Package) 추가 금지**: 유틸이나 라이브러리가 필요할 때 기존 패키지를 재사용해야 하며, 추가적인 외부 패키지 설치는 반드시 작업자(인간)의 사전 승인을 거쳐야 합니다.
     4.  **DB 스키마 마이그레이션 원칙 고수**: 로컬 및 클라우드 DB 수정 시 콘솔 직접 수정이나 임의 SQL 실행을 금지하고, 오직 `supabase migration` 파일 생성 및 적용을 통해서만 반영합니다.
     5.  **설계 문서 최신화 (Documentation Drift 방지)**: 개발 과정에서 스키마 변경, API 스펙 수정 등이 발생하면 코드 반영과 동시에 `docs/` 폴더 내 관련 설계 문서 내용도 반드시 함께 갱신하여 문서가 낡지 않게 유지합니다.

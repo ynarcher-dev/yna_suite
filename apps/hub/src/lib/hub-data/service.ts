@@ -61,6 +61,7 @@ import type {
   StartupDetail,
   StartupMaster,
   TemporaryMasterInput,
+  TemporaryMasterListItem,
   TemporaryMasterResult,
 } from "./types";
 
@@ -108,6 +109,50 @@ export async function listPartners(): Promise<PartnerMaster[]> {
 export async function getPartnerDetail(id: string): Promise<PartnerDetail | null> {
   ensureFallback();
   return mockGetPartnerDetail(id);
+}
+
+/**
+ * 임시 마스터(TEMP 코드, active) 엔티티 공통 목록. (functional_spec §14-1)
+ * 기존 목록 조회 + pending 중복 후보 수 집계의 순수 조합이라 별도 store 코드가 없다.
+ */
+export async function listTemporaryMasters(): Promise<TemporaryMasterListItem[]> {
+  ensureFallback();
+  const [startups, experts, partners, candidates] = await Promise.all([
+    mockListStartups(),
+    mockListExperts(),
+    mockListPartners(),
+    mockListMergeCandidates({}),
+  ]);
+  const pendingCount = (entityType: EntityType, id: string): number =>
+    candidates.filter(
+      (c) =>
+        c.entityType === entityType &&
+        c.status === "pending" &&
+        (c.source.id === id || c.target.id === id),
+    ).length;
+  const project = (
+    entityType: EntityType,
+    rows: Pick<
+      StartupMaster,
+      "id" | "masterCode" | "name" | "sourceDomain" | "status" | "createdAt"
+    >[],
+  ): TemporaryMasterListItem[] =>
+    rows
+      .filter((r) => r.masterCode.startsWith("TEMP-") && r.status === "active")
+      .map((r) => ({
+        id: r.id,
+        entityType,
+        masterCode: r.masterCode,
+        name: r.name,
+        sourceDomain: r.sourceDomain,
+        pendingCandidateCount: pendingCount(entityType, r.id),
+        createdAt: r.createdAt,
+      }));
+  return [
+    ...project("startup", startups),
+    ...project("expert", experts),
+    ...project("partner", partners),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function searchMasters(args: {

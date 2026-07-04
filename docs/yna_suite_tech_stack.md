@@ -19,7 +19,7 @@ Monorepo     : pnpm workspace + Turborepo
 Frontend     : Next.js + React
 Language     : TypeScript
 Backend/DB   : Supabase
-UI           : Tailwind CSS + shadcn/ui
+UI           : Tailwind CSS + 자체 네이티브 컴포넌트(packages/ui)
 Forms        : React Hook Form + Zod
 Data Fetch   : TanStack Query
 Tables       : TanStack Table
@@ -27,6 +27,8 @@ Charts       : Recharts
 Testing      : Vitest + Playwright
 Deploy       : Vercel
 ```
+
+> UI 결정 변경(Phase 1.5, 이슈20): shadcn/ui(Radix) 도입 대신 **외부 패키지 없이 네이티브 구현**으로 확정했다. Radix/TanStack Table 등은 복잡한 접근성·가상 스크롤 요구가 실제로 생기면 재검토한다. §7 참고.
 
 ## 3. Monorepo: pnpm workspace + Turborepo
 
@@ -98,15 +100,18 @@ mna
 project
 fund
 management
+staging   ← 도메인 스키마는 아니고, 기존 데이터 import 원본/판정 결과를 보존하는
+           이관 전용 스키마 (staging.import_batches, staging.startup_import_rows —
+           배포 환경 이름 'staging'과는 무관하다)
 ```
 
-## 7. UI: Tailwind CSS + shadcn/ui
+## 7. UI: Tailwind CSS + 자체 네이티브 컴포넌트
 
 Y&A Suite는 업무형 SaaS에 가깝다. 폼, 테이블, 모달, 탭, 필터, 상세 패널 같은 화면 요소가 반복적으로 등장한다.
 
 Tailwind CSS는 앱별 화면을 빠르게 만들면서도 디자인 규칙을 공통화하기 좋다. `packages/ui`에서 디자인 토큰과 공통 컴포넌트를 관리하면 서비스별 UI 일관성을 유지할 수 있다.
 
-shadcn/ui는 Radix UI 기반의 접근성 좋은 컴포넌트를 프로젝트 내부 코드로 소유하는 방식이다. 외부 UI 라이브러리에 과하게 묶이지 않고, Y&A Suite에 맞게 수정하기 쉽다.
+공통 컴포넌트는 **외부 UI 패키지 없이 네이티브로 직접 구현**한다(Phase 1.5 확정, 미사용 의존성 금지 규칙). Select/Switch/Table/ConfirmDialog 등이 `packages/ui`에 네이티브 primitive로 구현되어 있다. 당초 후보였던 shadcn/ui(Radix 기반)는 도입하지 않았으며, 복잡한 접근성(a11y)·가상 스크롤 요구가 실제로 생기면 Radix/TanStack Table 도입을 재검토한다.
 
 주요 위치:
 

@@ -3,7 +3,7 @@ import { listAuditLogs } from "@/lib/hub-data/service";
 import { AuditLogsTable } from "@/components/audit/audit-logs-table";
 
 /**
- * Hub 공통 감사 로그 화면. (근거: functional_spec §16, api_contracts §5, data_model §12)
+ * Hub 공통 감사 로그 화면. (근거: functional_spec §14-2, api_contracts §5, data_model §12)
  * 마스터 변경·병합·임시 생성·민감정보 조회 등 민감 액션 이력. 로그는 수정·삭제되지 않는다.
  */
 export default async function AuditLogsPage() {

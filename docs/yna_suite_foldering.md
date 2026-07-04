@@ -27,7 +27,7 @@ management.ynarcher.co.kr   -> Y&A Management
 ## 2. 추천 루트 구조
 
 ```txt
-yna_data_hub/
+yna_suite/
   package.json
   pnpm-workspace.yaml
   turbo.json
@@ -53,29 +53,12 @@ yna_data_hub/
     utils/
 
   supabase/
-    migrations/
-    schemas/
-      hub/
-      dev/
-      work/
-      mna/
-      project/
-      fund/
-      management/
-    policies/
-      hub/
-      dev/
-      work/
-      mna/
-      project/
-      fund/
-      management/
+    config.toml
+    migrations/     ← 모든 스키마/테이블/RLS 변경의 단일 관리 경로
     seed/
 
-  docs/
-    planning/
-    architecture/
-    decisions/
+  docs/             ← yna_suite_*.md 설계 문서 (평면 구조, docs/README.md가 목차)
+  docs_jm/          ← 작업 노트 (계획/규칙/체크리스트/메모/진행/문서리뷰)
 
   scripts/
     import/
@@ -185,36 +168,17 @@ packages/master-data/
 
 ```txt
 supabase/
+  config.toml
   migrations/
-  schemas/
-    hub/
-      startups.sql
-      experts.sql
-      partners.sql
-      merge_events.sql
-      aliases.sql
-    dev/
-      user_permissions.sql
-      roles.sql
-    work/
-      programs.sql
-      program_modules.sql
-      applications.sql
-      program_participants.sql
-      program_activities.sql
-      meeting_minutes.sql
-    fund/
-      funds.sql
-      ledgers.sql
-  policies/
-    hub/
-      startups.policy.sql
-    work/
-      programs.policy.sql
+    20260703171001_create_schemas.sql
+    20260703171002_create_hub_master_tables.sql
+    ...
   seed/
 ```
 
-DB 스키마는 서비스 도메인과 동일한 이름으로 나눈다.
+테이블 정의와 RLS 정책을 포함한 **모든 DB 변경은 `supabase/migrations`의 시간순 migration 파일로만 관리**한다(`yna_suite_database_operations.md` §2 Migration Only). 별도의 `schemas/`·`policies/` 디렉터리로 나누어 관리하지 않는다 — 초기 설계에서 검토했으나 migration 단일 경로로 확정했다(Phase 1.3).
+
+DB 스키마는 서비스 도메인과 동일한 이름으로 나누고, 이관 전용 스키마 하나를 추가로 둔다.
 
 ```txt
 hub
@@ -224,6 +188,7 @@ mna
 project
 fund
 management
+staging   ← 기존 데이터 import 전용 (배포 환경명 'staging'과 무관)
 ```
 
 RLS 정책도 같은 기준으로 나누되, 공통 권한 판단이 필요한 경우 `dev.user_permissions` 또는 권한 관련 DB function을 참조한다.

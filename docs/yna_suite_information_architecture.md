@@ -113,7 +113,7 @@ Hub
     List
     Compare Detail
     Preview
-    Approve/Reject/Ignore
+    Approve/Reject/Ignore/Hold  (Hold는 화면 내 서버 액션 전용 — api_contracts §15)
   Import Batches
     List
     Detail

@@ -490,11 +490,14 @@ CREATE TABLE hub.merge_events (
     affected_records JSONB DEFAULT '[]'::jsonb,               -- FK가 변경된 업무 레코드 목록
     before_snapshot JSONB NOT NULL,                           -- 병합 전 데이터 스냅샷
     after_snapshot JSONB NOT NULL,                            -- 병합 후 데이터 스냅샷
+    sync_status VARCHAR(50) DEFAULT 'pending',                 -- 비동기 동기화 상태: pending/processing/completed/failed
     reason TEXT NULL,                                         -- 병합 사유
     approved_by UUID REFERENCES auth.users(id),                -- 병합 승인자
     created_at TIMESTAMPTZ DEFAULT now()                       -- 병합 시각
 );
 ```
+
+> `sync_status`는 2단계 비동기 병합(§"병합 실행")에서 백그라운드 FK 동기화 진행 상태를 추적한다. DDL 기준 문서는 `yna_suite_data_model.md` §4.9.
 
 `affected_records` 예시:
 

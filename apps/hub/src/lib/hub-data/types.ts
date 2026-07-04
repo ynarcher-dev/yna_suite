@@ -539,3 +539,15 @@ export interface MasterSearchApiItem extends MasterSearchResult {
   /** "이름 / 대표자" 형태의 표시 라벨(엔티티별). */
   displayLabel: string;
 }
+
+/** 임시 마스터 목록 항목(엔티티 공통 투영). (functional_spec §14-1, IA §4 Temporary Masters) */
+export interface TemporaryMasterListItem {
+  id: string;
+  entityType: EntityType;
+  masterCode: string;
+  name: string;
+  sourceDomain: string | null;
+  /** 이 마스터가 얽힌 pending 중복 후보 수. */
+  pendingCandidateCount: number;
+  createdAt: string;
+}
