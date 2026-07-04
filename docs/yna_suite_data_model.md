@@ -253,7 +253,7 @@ CREATE TABLE hub.master_aliases (
 );
 ```
 
-> 삭제 정책: alias는 마스터 본체와 달리 **경량 부속 레코드로서 물리 삭제(DELETE)를 허용**한다(soft delete 우선 원칙의 예외 — `yna_suite_database_operations.md` §"삭제 정책" 참고). 잘못 등록된 alias 정리가 목적이며, 대표값에서 밀려난 이름의 보존은 삭제가 아니라 alias 유지로 달성한다.
+> 삭제 정책: alias는 마스터 본체와 달리 **경량 부속 레코드로서 물리 삭제(DELETE)를 허용**한다(soft delete 우선 원칙의 예외 — `yna_suite_database_operations.md` §8 참고). 잘못 등록된 alias 정리가 목적이며, 대표값에서 밀려난 이름의 보존은 삭제가 아니라 alias 유지로 달성한다.
 
 예시:
 

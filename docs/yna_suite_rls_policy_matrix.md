@@ -151,7 +151,7 @@ work.can_read_activity(activity_id uuid)
 work.can_write_activity(activity_id uuid)
 ```
 
-병합 resolve는 DB 함수 대신 **`hub.resolved_startups` / `hub.resolved_experts` / `hub.resolved_partners` view + `packages/database`의 `resolveMasterId` helper**를 사용한다(Phase 1.10 구현 기준, `yna_suite_data_model.md` §5 참고).
+병합 resolve는 DB 함수 대신 **`hub.resolved_startups` / `hub.resolved_experts` / `hub.resolved_partners` view + `packages/database`의 `resolveMasterId` helper**를 사용한다(Phase 1.10 구현 기준, `yna_suite_data_model.md` §4.10 참고).
 
 주의:
 
@@ -198,7 +198,7 @@ DELETE:
   물리 삭제 금지
   status 변경만 허용
   (법적 개인정보 파기는 화면/API 경로가 아닌 관리자 전용 운영 절차로만 수행 —
-   yna_suite_backup_retention_privacy.md §"삭제 유형" 참고)
+   yna_suite_backup_retention_privacy.md §7 참고)
 ```
 
 외부 사용자 주의:
