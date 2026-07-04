@@ -249,6 +249,14 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
 *   **[x] 검증 목적 확인**
     *   Hub 마스터를 직접 수정하지 않고, 새 대상은 임시 마스터·병합 후보 흐름을 탄다는 계약이 실제로 작동하는지 확인. (실제 Work UI 완성이 아님) (신청 `startup_id` 는 연결 시점 그대로 보존, 최종 마스터는 `resolveMasterId`(COALESCE)로 실시간 resolve — Hub 직접 수정 없이 병합 귀속 재현.)
 
+### [ ] Phase 1.14 설계 문서 정합성 보완
+*(근거: docs_jm/6_docs_review.md — 2026-07-04 문서 교차 리뷰)*
+> 2026-07-04 docs 22개 + docs_jm 6개 교차 리뷰에서 문서 간 불일치 36건(높음 4 · 중간 15 · 낮음 17)이 발견됨. Phase 2 착수 전 심각도 높음/중간 항목을 우선 해소한다.
+
+*   **[ ] `docs_jm/6_docs_review.md`를 참고하여 문서 간 불일치 보완**
+    *   심각도 높음 4건(guest 권한 충돌 2건, migration_strategy DDL 드리프트, Temporary Masters 라우트/명세 공백)은 Phase 2 개발 전 필수 해소.
+    *   중간 15건은 해당 영역 작업 착수 전 해소, 낮음 17건은 발견 시 수시 반영. 처리한 항목은 6_docs_review.md 체크박스로 관리.
+
 ---
 
 ## 4. Phase 2: Y&A Work 연결 (중간)
