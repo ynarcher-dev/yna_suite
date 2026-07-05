@@ -23,7 +23,7 @@
 
 ## Phase 1 구현 기준
 
-- [yna_suite_hub_dev_functional_spec.md](./yna_suite_hub_dev_functional_spec.md): WORKS의 HUB 섹션과 관리 섹션의 화면/기능 명세
+- [yna_suite_hub_admin_functional_spec.md](./yna_suite_hub_admin_functional_spec.md): WORKS의 HUB 섹션과 관리 섹션의 화면/기능 명세
 - [yna_suite_api_contracts.md](./yna_suite_api_contracts.md): HUB/관리/도메인 섹션 사이의 API와 RPC 계약
 - [yna_suite_data_model.md](./yna_suite_data_model.md): 스키마, 테이블, 컬럼 설계
 - [yna_suite_master_data_policy.md](./yna_suite_master_data_policy.md): 마스터 데이터 생성, 식별자, 중복 후보, 병합 정책

@@ -38,7 +38,7 @@
     *   문제: 같은 섹션의 RLS 기준(`rls_policy_matrix.md:194~195` INSERT/UPDATE는 `dev.can_write_domain('hub')`)으로는 hub=None인 guest_startup의 UPDATE("자기 제출 일부만")가 구현 불가. SELECT는 "별도 view 경유" 단서가 있으나 UPDATE 경로는 미정의.
     *   권장 조치: 외부 제출 UPDATE 경로(view/RPC/도메인 앱 경유)를 명시하거나 RLS 매트릭스의 해당 행을 수정.
 *   **[x] H4. "Temporary Masters(임시 마스터)" 화면 — IA는 Phase 1 필수인데 기능 명세 부재 + 실제로는 사이드바 링크만 있는 404 상태**
-    *   근거: `docs/yna_suite_information_architecture.md:111,132` Phase 1 필수 목록에 "Temporary Masters" 포함 vs `docs/yna_suite_hub_dev_functional_spec.md` §10은 "임시 마스터 생성" 처리만 정의, 목록 화면 섹션·§21 화면별 권한 표에 해당 화면 없음.
+    *   근거: `docs/yna_suite_information_architecture.md:111,132` Phase 1 필수 목록에 "Temporary Masters" 포함 vs `docs/yna_suite_hub_admin_functional_spec.md` §10은 "임시 마스터 생성" 처리만 정의, 목록 화면 섹션·§21 화면별 권한 표에 해당 화면 없음.
     *   실코드: `apps/hub/src/lib/nav.ts:37`에 `/temporary-masters` 링크 존재, `apps/hub/src/app/(app)/`에 라우트 없음. 그런데 `docs_jm/3_checklist.md`는 Phase 1.13(Phase 1 마지막 개발 항목)을 완료 처리(`docs_jm/5_progress.md:78`에 "라우트 신설 필요" 기록만 남고 미신설).
     *   권장 조치: 라우트를 구현하든지, IA·nav에서 제거/Phase 2 이관을 명시하고 기능 명세와 정합화.
 
@@ -68,16 +68,16 @@
 *   **[x] M8. `hub.experts`에 auth 계정 연결 컬럼 없음 — guest_expert self scope RLS 구현 불가**
     *   근거: `docs/yna_suite_rls_policy_matrix.md:455~457` "expert_id가 auth.uid()와 연결된 hub.experts.id" 전제 vs `docs/yna_suite_data_model.md:164~184` hub.experts에 user_id 등 auth.users 연결 컬럼 없음(hub.managers만 `:222`에 user_id 보유). `work.evaluations`는 `evaluator_user_id`로 우회 가능하나 `work.mentoring_sessions`(`data_model.md:660~674`)는 expert_id만 있어 연결 수단 필요.
 *   **[x] M9. `master_data_merge` 세분 권한이 권한 모델에 없음**
-    *   근거: `docs/yna_suite_hub_dev_functional_spec.md:386` "master 또는 master_data_merge 권한" 요구 vs `docs/yna_suite_planning.md:63~69` `dev.user_permissions`는 can_read/can_write 두 토글만 정의. 실구현은 임시로 hub write로 해석(`docs_jm/4_memo.md:185` `requireMergeAccess`). 세분 권한을 모델에 추가하든지 명세를 hub write 기준으로 수정.
+    *   근거: `docs/yna_suite_hub_admin_functional_spec.md:386` "master 또는 master_data_merge 권한" 요구 vs `docs/yna_suite_planning.md:63~69` `dev.user_permissions`는 can_read/can_write 두 토글만 정의. 실구현은 임시로 hub write로 해석(`docs_jm/4_memo.md:185` `requireMergeAccess`). 세분 권한을 모델에 추가하든지 명세를 hub write 기준으로 수정.
 
 ### 2.3 범위/기능 명세 (3건)
 
 *   **[x] M10. 전문가/협력사 마스터 "생성"이 범위 문서에는 Phase 1 필수, 기능 명세에는 없음**
-    *   근거: `docs/yna_suite_phase1_scope.md:145` "전문가 마스터 생성/수정", `:148` "협력사 마스터 생성/수정" (Phase 1 필수) vs `docs/yna_suite_hub_dev_functional_spec.md` §8·§9 전문가/협력사 섹션에 생성 기능 없음(신규 생성은 §6 스타트업에만, `:205`). 실구현 판단 기록: `docs_jm/4_memo.md:149`. (Phase 1.8의 공용 임시 생성 dialog로 사실상 해소되었는지 확인 후 두 문서 정합화.)
+    *   근거: `docs/yna_suite_phase1_scope.md:145` "전문가 마스터 생성/수정", `:148` "협력사 마스터 생성/수정" (Phase 1 필수) vs `docs/yna_suite_hub_admin_functional_spec.md` §8·§9 전문가/협력사 섹션에 생성 기능 없음(신규 생성은 §6 스타트업에만, `:205`). 실구현 판단 기록: `docs_jm/4_memo.md:149`. (Phase 1.8의 공용 임시 생성 dialog로 사실상 해소되었는지 확인 후 두 문서 정합화.)
 *   **[x] M11. "기본 감사 로그 조회" 화면이 범위·IA에는 Phase 1 필수인데 기능 명세에 화면 섹션 없음**
-    *   근거: `docs/yna_suite_phase1_scope.md:158` + `docs/yna_suite_information_architecture.md:120,135` "Audit Logs"(Phase 1 필수) vs `docs/yna_suite_hub_dev_functional_spec.md` §14 다음이 §15로 Hub 감사 로그 화면 명세·§21 권한표 행 없음. 실제 라우트 `/audit-logs`는 Phase 1.11에서 뒤늦게 신설(`docs_jm/4_memo.md:192`) — 명세 문서에 화면 섹션 추가 필요.
+    *   근거: `docs/yna_suite_phase1_scope.md:158` + `docs/yna_suite_information_architecture.md:120,135` "Audit Logs"(Phase 1 필수) vs `docs/yna_suite_hub_admin_functional_spec.md` §14 다음이 §15로 Hub 감사 로그 화면 명세·§21 권한표 행 없음. 실제 라우트 `/audit-logs`는 Phase 1.11에서 뒤늦게 신설(`docs_jm/4_memo.md:192`) — 명세 문서에 화면 섹션 추가 필요.
 *   **[x] M12. 외부 사용자(guest) 격리 테스트의 Phase 배치 충돌**
-    *   근거: `docs/yna_suite_hub_dev_functional_spec.md:648` "타사/타인 데이터 접근 실패 테스트 통과"(Phase 1 완료 기준) 및 `docs_jm/3_checklist.md:363`(Phase 1 DoD) vs `docs/yna_suite_phase1_scope.md:372` "외부 스타트업/전문가 권한 검증"(Phase 2 범위), `:115~116` 외부 포털 Phase 1 제외, §14 완료 기준에 격리 항목 없음. 체크리스트 자신도 `:134` "외부 사용자 self/company view는 1.13/2로 이월"이라 하여 자기모순 — 격리 테스트의 소속 Phase를 한 곳으로 확정.
+    *   근거: `docs/yna_suite_hub_admin_functional_spec.md:648` "타사/타인 데이터 접근 실패 테스트 통과"(Phase 1 완료 기준) 및 `docs_jm/3_checklist.md:363`(Phase 1 DoD) vs `docs/yna_suite_phase1_scope.md:372` "외부 스타트업/전문가 권한 검증"(Phase 2 범위), `:115~116` 외부 포털 Phase 1 제외, §14 완료 기준에 격리 항목 없음. 체크리스트 자신도 `:134` "외부 사용자 self/company view는 1.13/2로 이월"이라 하여 자기모순 — 격리 테스트의 소속 Phase를 한 곳으로 확정.
 
 ### 2.4 기술스택/프로세스 (3건)
 
@@ -93,7 +93,7 @@
 ## 3. 심각도 낮음 (17건)
 
 *   **[x] L1. `merge_candidates`의 `on_hold`(보류) 노출 불일치**
-    *   `docs/yna_suite_data_model.md:345~352`·`data_quality_governance.md:96~110`은 on_hold 포함 6종 vs `docs/yna_suite_api_contracts.md:455` status 필터에 on_hold 없음, `docs/yna_suite_information_architecture.md:116`은 액션 3개(Approve/Reject/Ignore) vs `hub_dev_functional_spec.md:414~417`은 4개(+보류). "보류는 서버 액션 전용"이라는 실구현 의도(`docs_jm/4_memo.md:183`, 이슈27)를 api_contracts·IA에 명기.
+    *   `docs/yna_suite_data_model.md:345~352`·`data_quality_governance.md:96~110`은 on_hold 포함 6종 vs `docs/yna_suite_api_contracts.md:455` status 필터에 on_hold 없음, `docs/yna_suite_information_architecture.md:116`은 액션 3개(Approve/Reject/Ignore) vs `hub_admin_functional_spec.md:414~417`은 4개(+보류). "보류는 서버 액션 전용"이라는 실구현 의도(`docs_jm/4_memo.md:183`, 이슈27)를 api_contracts·IA에 명기.
 *   **[x] L2. `scope_type: "department"`가 데이터 모델에 미정의**
     *   `docs/yna_suite_api_contracts.md:640,674,714` 예시가 department 사용 vs `docs/yna_suite_data_model.md:434` comment는 "global/self/company/program 등"에 department 없음.
 *   **[x] L3. 권한 조회 API 응답의 role_key 구조 모순**

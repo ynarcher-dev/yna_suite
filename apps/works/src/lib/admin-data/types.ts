@@ -2,7 +2,7 @@ import type { Domain, PermissionMap, RoleTemplate } from "@yna/core";
 
 /**
  * Dev 사용자·권한 관리 화면의 도메인 타입.
- * (근거: yna_suite_hub_dev_functional_spec.md §15~19, yna_suite_data_model.md §5)
+ * (근거: yna_suite_hub_admin_functional_spec.md §15~19, yna_suite_data_model.md §5)
  *
  * name/email/status/last_sign_in 은 auth.users 에서, role_key/권한은 dev.user_permissions
  * 에서 온다. 실제 조회는 Docker/staging 에서 연결하고(이슈19), 현재는 mock 으로 배선을 검증한다.

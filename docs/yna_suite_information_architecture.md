@@ -10,7 +10,7 @@
 전체 기획: yna_suite_planning.md
 Phase 1 범위: yna_suite_phase1_scope.md
 폴더링/배포: yna_suite_foldering.md
-기능 명세: yna_suite_hub_dev_functional_spec.md
+기능 명세: yna_suite_hub_admin_functional_spec.md
 권한/RLS: yna_suite_auth_permissions.md
 기존 소스 반영: yna_suite_existing_source_alignment.md
 ```
