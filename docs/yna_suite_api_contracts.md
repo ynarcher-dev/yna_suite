@@ -1,6 +1,6 @@
-# Y&A Suite API 및 도메인 계약 가이드
+# Y&ARCHER WORKS API 및 도메인 계약 가이드
 
-본 문서는 Y&A Suite Phase 1에서 Hub, Dev, 공통 패키지, 향후 Work 도메인 앱이 서로 같은 방식으로 통신하기 위한 API/RPC 계약을 정의한다.
+본 문서는 Y&ARCHER WORKS Phase 1에서 Hub, Dev, 공통 패키지, 향후 Work 도메인 앱이 서로 같은 방식으로 통신하기 위한 API/RPC 계약을 정의한다.
 
 이 문서의 목적은 화면 구현보다 먼저 **도메인 간 연결 방식**을 고정하는 것이다. 특히 Hub 마스터 검색, 임시 마스터 생성, 중복 후보 생성, 병합 승인, 권한 조회는 여러 앱이 반복해서 사용하므로 구현 전에 계약을 명확히 둔다.
 
@@ -90,7 +90,7 @@ supabase/functions 또는 RPC
 ```txt
 Authorization은 Supabase Auth 세션을 사용한다.
 클라이언트에서 service role key를 보내지 않는다.
-도메인 이름은 hub/dev/work/mna/project/fund/management 중 하나만 사용한다.
+도메인 이름은 hub/admin/ac/mna/project/fund/management 중 하나만 사용한다.
 entity_type은 startup/expert/partner/manager 중 하나를 우선 사용한다.
 UUID는 문자열로 전달한다.
 날짜/시간은 ISO 8601 문자열을 사용한다.
@@ -513,7 +513,7 @@ POST /api/hub/merge-candidates/{candidate_id}/preview
     },
     "affected_records": [
       {
-        "table": "work.applications",
+        "table": "ac.applications",
         "record_id": "uuid",
         "field": "startup_id",
         "before": "source-id",
@@ -649,7 +649,7 @@ GET /api/dev/me/permissions
 }
 ```
 
-> `role_key`는 `dev.user_permissions`의 PK가 (user_id, domain_name)이므로 **도메인별 값**이다. 템플릿을 일괄 적용하면 전 도메인이 같은 값을 갖지만, 개별 override가 가능하므로 응답에서도 도메인 단위로 내려준다.
+> `role_key`는 `admin.user_permissions`의 PK가 (user_id, domain_name)이므로 **도메인별 값**이다. 템플릿을 일괄 적용하면 전 도메인이 같은 값을 갖지만, 개별 override가 가능하므로 응답에서도 도메인 단위로 내려준다.
 
 권한:
 
@@ -784,8 +784,8 @@ GET .../applications/{id} 응답: { startup_id, resolved_startup_id, resolved_ma
 ```
 
 구현(Phase 1.13): Hub 내부 "도메인 연결 테스트" 기능으로 제공한다.
-Mock 스토어·API·화면(`/domain-test`)은 `apps/hub` 안에 두고 Hub mock 마스터/병합/resolved 를 재사용한다.
-work.* DB 테이블·마이그레이션은 만들지 않는다(in-memory mock, 실제 Work 스키마는 Phase 2 에서 교체).
+Mock 스토어·API·화면(`/domain-test`)은 `apps/works` 안에 두고 Hub mock 마스터/병합/resolved 를 재사용한다.
+ac.* DB 테이블·마이그레이션은 만들지 않는다(in-memory mock, 실제 AC(work) 스키마는 Phase 2 에서 교체).
 
 Mock program 요청 핵심 필드:
 
@@ -944,7 +944,7 @@ audit log 대상인가?
 
 ## 24. 최종 요약
 
-Y&A Suite의 Phase 1 API 계약은 다음을 핵심으로 한다.
+Y&ARCHER WORKS의 Phase 1 API 계약은 다음을 핵심으로 한다.
 
 ```txt
 Hub 검색/임시 생성/병합은 모든 도메인 앱의 공통 계약이다.

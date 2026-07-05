@@ -31,7 +31,7 @@ CREATE TABLE hub.master_identifiers (
     identifier_value TEXT NOT NULL,                            -- 원본 식별자 값
     normalized_value TEXT NOT NULL,                            -- 비교/중복 판단용 정규화 값
     confidence_score NUMERIC(5, 2) NULL,                       -- 식별자 자체의 신뢰도
-    source_domain VARCHAR(50) NULL,                            -- work/fund/mna/import 등 유입 출처
+    source_domain VARCHAR(50) NULL,                            -- ac/fund/mna/import 등 유입 출처
     source_label TEXT NULL,                                    -- 행사명, 엑셀 파일명, 프로그램명 등 출처 설명
     is_primary BOOLEAN DEFAULT FALSE,                          -- 대표 식별자 여부
     verified_status VARCHAR(50) DEFAULT 'unverified',         -- unverified/verified/rejected

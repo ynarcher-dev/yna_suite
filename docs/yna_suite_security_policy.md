@@ -1,6 +1,6 @@
-# Y&A Suite 보안 정책 가이드
+# Y&ARCHER WORKS 보안 정책 가이드
 
-본 문서는 Y&A Suite의 보안 기준을 정의한다. 인증/권한/RLS의 세부 구조는 `yna_suite_auth_permissions.md`를 따르며, 본 문서는 개인정보, 비밀키, 외부 사용자, 파일, 로그, 운영 보안을 포함한 종합 보안 원칙을 다룬다.
+본 문서는 Y&ARCHER WORKS의 보안 기준을 정의한다. 인증/권한/RLS의 세부 구조는 `yna_suite_auth_permissions.md`를 따르며, 본 문서는 개인정보, 비밀키, 외부 사용자, 파일, 로그, 운영 보안을 포함한 종합 보안 원칙을 다룬다.
 
 관련 문서:
 
@@ -14,7 +14,7 @@ DB 운영 규칙: yna_suite_database_operations.md
 
 ## 1. 핵심 원칙
 
-Y&A Suite의 보안은 다음 원칙을 따른다.
+Y&ARCHER WORKS의 보안은 다음 원칙을 따른다.
 
 ```txt
 최소 권한 원칙
@@ -28,7 +28,7 @@ Y&A Suite의 보안은 다음 원칙을 따른다.
 
 ## 2. 데이터 분류
 
-Y&A Suite의 데이터는 민감도에 따라 분류한다.
+Y&ARCHER WORKS의 데이터는 민감도에 따라 분류한다.
 
 | 등급 | 예시 | 처리 기준 |
 | :--- | :--- | :--- |
@@ -96,7 +96,7 @@ staging/preview에는 운영 개인정보를 그대로 사용하지 않는다.
 
 ```txt
 관리자 계정은 MFA 적용 검토
-Y&A Dev 접근 계정은 최소 인원으로 제한
+관리(ADMIN) 섹션 접근 계정은 최소 인원으로 제한
 외부 사용자는 제한된 도메인 권한만 부여
 ```
 
@@ -115,8 +115,8 @@ User Role + Domain Permission + Data Scope
 쓰기 권한은 읽기 권한보다 엄격하게 관리한다.
 임시 권한은 expires_at을 설정한다.
 JWT 기반 RLS를 쓰더라도 expires_at은 claim에 포함하고 RLS helper에서 now()와 비교해 만료 즉시 차단한다.
-권한 변경은 dev.permission_audit_logs에 기록한다.
-Y&A Dev 접근은 master 또는 제한된 관리자에게만 허용한다.
+권한 변경은 admin.permission_audit_logs에 기록한다.
+관리(ADMIN) 섹션 접근은 master 또는 제한된 관리자에게만 허용한다.
 ```
 
 외부 사용자:
@@ -454,7 +454,7 @@ service role이 클라이언트에 노출되지 않는가?
 
 ## 19. 최종 요약
 
-Y&A Suite 보안의 핵심은 다음과 같다.
+Y&ARCHER WORKS 보안의 핵심은 다음과 같다.
 
 ```txt
 최소 권한
@@ -467,4 +467,4 @@ secret 서버 전용 관리
 운영/개발 환경 분리
 ```
 
-Y&A Suite는 전사 마스터 데이터, 투자/프로젝트/M&A/HR 데이터를 다룬다. 따라서 보안은 기능 개발 후 붙이는 장치가 아니라, 데이터 모델, 권한, UI, 배포, 운영 절차 전반에 함께 들어가야 한다.
+Y&ARCHER WORKS는 전사 마스터 데이터, 투자/프로젝트/M&A/HR 데이터를 다룬다. 따라서 보안은 기능 개발 후 붙이는 장치가 아니라, 데이터 모델, 권한, UI, 배포, 운영 절차 전반에 함께 들어가야 한다.

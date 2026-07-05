@@ -1,14 +1,16 @@
-# Y&A Suite 데이터 모델 설계 가이드
+# Y&ARCHER WORKS 데이터 모델 설계 가이드
 
-본 문서는 Y&A Suite의 주요 데이터 모델과 테이블 설계 기준을 정의한다. 상위 기획서의 논리 스키마 구조를 실제 구현 가능한 수준으로 구체화하는 것을 목표로 한다.
+> [2026-07-04] 아키텍처 개편 반영: 내부 통합 앱 Y&ARCHER WORKS + 외부 포털 Y&ARCHER WORKS-GUEST(Phase 2) 2앱 체제로 전환, 스키마 키 dev→admin, work→ac 교체.
 
-Y&A Suite는 하나의 Supabase Postgres를 사용하되, 서비스 도메인별 논리 스키마와 이관용 `staging` 스키마를 분리한다.
+본 문서는 Y&ARCHER WORKS의 주요 데이터 모델과 테이블 설계 기준을 정의한다. 상위 기획서의 논리 스키마 구조를 실제 구현 가능한 수준으로 구체화하는 것을 목표로 한다.
+
+Y&ARCHER WORKS는 하나의 Supabase Postgres를 사용하되, 섹션 도메인별 논리 스키마와 이관용 `staging` 스키마를 분리한다.
 
 ```txt
 hub
-dev
+admin
 staging
-work
+ac
 mna
 project
 fund
@@ -130,8 +132,8 @@ CREATE TABLE hub.startups (
     address TEXT NULL,                                        -- 본점/사업장 주소
     industry TEXT NULL,                                       -- 산업 분류 또는 내부 태그
     stage VARCHAR(50) NULL,                                   -- 예비창업, Seed, Series A 등 성장 단계
-    source_domain VARCHAR(50) NULL,                           -- 최초 유입 서비스(work, fund, mna 등)
-    source_record_id UUID NULL,                               -- 최초 유입 서비스의 원본 레코드 ID
+    source_domain VARCHAR(50) NULL,                           -- 최초 유입 섹션(ac, fund, mna 등)
+    source_record_id UUID NULL,                               -- 최초 유입 섹션의 원본 레코드 ID
     verification_status VARCHAR(50) DEFAULT 'pending',         -- pending/verified/rejected/needs_review/temporary 등 마스터 검증 상태
     status VARCHAR(50) DEFAULT 'active',                       -- active/merged/archived/deleted 등 생명주기 상태
     merged_into_id UUID REFERENCES hub.startups(id),           -- 병합된 경우 최종 마스터 ID
@@ -171,7 +173,7 @@ CREATE TABLE hub.experts (
     organization TEXT NULL,                                   -- 소속 기관/회사
     position TEXT NULL,                                       -- 직책/직함
     expertise_tags TEXT[] DEFAULT '{}',                       -- 전문 분야 태그
-    source_domain VARCHAR(50) NULL,                           -- 최초 유입 서비스
+    source_domain VARCHAR(50) NULL,                           -- 최초 유입 섹션
     source_record_id UUID NULL,                               -- 최초 유입 원본 레코드 ID
     verification_status VARCHAR(50) DEFAULT 'pending',         -- pending/verified/rejected/needs_review/temporary 등 Hub 검증 상태
     status VARCHAR(50) DEFAULT 'active',                       -- active/merged/archived 등
@@ -200,7 +202,7 @@ CREATE TABLE hub.partners (
     email TEXT NULL,                                          -- 대표 이메일
     website_url TEXT NULL,                                    -- 홈페이지 URL
     address TEXT NULL,                                        -- 주소
-    source_domain VARCHAR(50) NULL,                           -- 최초 유입 서비스
+    source_domain VARCHAR(50) NULL,                           -- 최초 유입 섹션
     source_record_id UUID NULL,                               -- 최초 유입 원본 레코드 ID
     verification_status VARCHAR(50) DEFAULT 'pending',         -- pending/verified/rejected/needs_review/temporary 등 Hub 검증 상태
     status VARCHAR(50) DEFAULT 'active',                       -- active/merged/archived 등
@@ -247,7 +249,7 @@ CREATE TABLE hub.master_aliases (
     alias_value TEXT NOT NULL,                                -- 과거명, 약칭, 영문명, 오탈자명 등
     normalized_value TEXT NOT NULL,                           -- 검색/비교용 정규화 값
     alias_type VARCHAR(50) NOT NULL,                          -- previous_name/short_name/english_name 등
-    source_domain VARCHAR(50) NULL,                           -- alias가 유입된 서비스 또는 import 출처
+    source_domain VARCHAR(50) NULL,                           -- alias가 유입된 섹션 또는 import 출처
     created_at TIMESTAMPTZ DEFAULT now(),                     -- 등록 시각
     created_by UUID REFERENCES auth.users(id)                  -- 등록자
 );
@@ -275,7 +277,7 @@ CREATE TABLE hub.master_identifiers (
     identifier_value TEXT NOT NULL,                           -- 원본 식별자 값
     normalized_value TEXT NOT NULL,                           -- 비교/중복 판단용 정규화 값
     confidence_score NUMERIC(5, 2) NULL,                      -- 식별자 자체의 신뢰도
-    source_domain VARCHAR(50) NULL,                           -- work/fund/mna/import 등 유입 출처
+    source_domain VARCHAR(50) NULL,                           -- ac/fund/mna/import 등 유입 출처
     source_label TEXT NULL,                                   -- 행사명, 엑셀 파일명, 프로그램명 등 출처 설명
     is_primary BOOLEAN DEFAULT FALSE,                         -- 대표 식별자 여부
     verified_status VARCHAR(50) DEFAULT 'unverified',          -- unverified/verified/rejected
@@ -419,14 +421,14 @@ JOIN hub.startups target
 규칙:
 
 ```txt
-업무 도메인 앱(work, fund, mna 등)은 hub 마스터를 직접 조인하며 COALESCE 를 반복 작성하지 않는다.
+업무 도메인 섹션(ac, fund, mna 등)은 hub 마스터를 직접 조인하며 COALESCE 를 반복 작성하지 않는다.
 이 view(또는 packages/database 의 resolveMasterId/isMerged/RESOLVED_MASTER_VIEW helper)를 경유해 source_id 와 resolved_id 를 함께 얻는다.
 COALESCE(merged_into_id, id) 는 view/helper 내부 구현으로 숨긴다.
 ```
 
-## 5. `dev` 스키마
+## 5. `admin` 스키마
 
-`dev`는 계정, 권한, 관리자 기능을 담당한다.
+`admin`은 계정, 권한, 관리자 기능을 담당한다.
 
 주요 테이블:
 
@@ -437,14 +439,14 @@ permission_audit_logs
 system_settings
 ```
 
-### 5.1 `dev.user_permissions`
+### 5.1 `admin.user_permissions`
 
-사용자별 서비스 권한이다.
+사용자별 섹션 도메인 권한이다.
 
 ```sql
-CREATE TABLE dev.user_permissions (
+CREATE TABLE admin.user_permissions (
     user_id UUID REFERENCES auth.users(id),                  -- 권한 대상 사용자
-    domain_name VARCHAR(50) NOT NULL,                        -- hub/work/fund 등 서비스 도메인
+    domain_name VARCHAR(50) NOT NULL,                        -- hub/ac/fund 등 섹션 도메인
     role_key VARCHAR(50) NOT NULL,                           -- master/business_team 등 역할 템플릿
     can_read BOOLEAN DEFAULT FALSE,                          -- 해당 도메인 조회 가능 여부
     can_write BOOLEAN DEFAULT FALSE,                         -- 해당 도메인 생성/수정 가능 여부
@@ -459,12 +461,12 @@ CREATE TABLE dev.user_permissions (
 
 `expires_at`은 임시 권한의 최종 만료 기준이다. JWT `app_metadata.permissions`에 권한을 캐싱할 때도 도메인별 `expires_at`을 함께 포함하고, RLS helper에서 `now()`와 비교해 만료된 권한을 차단한다.
 
-### 5.2 `dev.permission_templates`
+### 5.2 `admin.permission_templates`
 
 권한 템플릿의 기본 도메인 권한과 scope 기본값을 저장한다. Phase 1에서는 복잡한 템플릿 편집기보다 템플릿 조회와 사용자 적용을 우선한다.
 
 ```sql
-CREATE TABLE dev.permission_templates (
+CREATE TABLE admin.permission_templates (
     role_key VARCHAR(50) PRIMARY KEY,                         -- master/business_team/viewer 등 템플릿 키
     display_name TEXT NOT NULL,                               -- 화면 표시명
     description TEXT NULL,                                    -- 템플릿 설명
@@ -489,17 +491,17 @@ guest_startup
 viewer
 ```
 
-### 5.3 `dev.permission_audit_logs`
+### 5.3 `admin.permission_audit_logs`
 
 권한 변경 이력이다.
 
 ```sql
-CREATE TABLE dev.permission_audit_logs (
+CREATE TABLE admin.permission_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),            -- 감사 로그 ID
     actor_user_id UUID REFERENCES auth.users(id),             -- 권한을 변경한 관리자
     target_user_id UUID REFERENCES auth.users(id),            -- 권한이 변경된 사용자
     action VARCHAR(50) NOT NULL,                              -- grant/revoke/update/expire 등
-    domain_name VARCHAR(50) NULL,                             -- 변경 대상 서비스 도메인
+    domain_name VARCHAR(50) NULL,                             -- 변경 대상 섹션 도메인
     before_value JSONB NULL,                                  -- 변경 전 권한 값
     after_value JSONB NULL,                                   -- 변경 후 권한 값
     reason TEXT NULL,                                        -- 변경 사유
@@ -508,12 +510,12 @@ CREATE TABLE dev.permission_audit_logs (
 );
 ```
 
-### 5.4 `dev.system_settings`
+### 5.4 `admin.system_settings`
 
-서비스 도메인, 기능 플래그, mock 기능 비활성화 같은 운영 설정의 확장 지점이다. Phase 1에서는 꼭 필요한 설정만 최소로 사용한다.
+섹션 도메인, 기능 플래그, mock 기능 비활성화 같은 운영 설정의 확장 지점이다. Phase 1에서는 꼭 필요한 설정만 최소로 사용한다.
 
 ```sql
-CREATE TABLE dev.system_settings (
+CREATE TABLE admin.system_settings (
     setting_key VARCHAR(100) PRIMARY KEY,                     -- 설정 키
     setting_value JSONB NOT NULL DEFAULT '{}'::jsonb,          -- 설정 값
     description TEXT NULL,                                    -- 설정 설명
@@ -522,11 +524,11 @@ CREATE TABLE dev.system_settings (
 );
 ```
 
-## 6. `work` 스키마
+## 6. `ac` 스키마
 
-`work`는 프로그램 실행과 운영 기록을 담당한다. `yna-matching`의 Program First 구조를 기준으로 하되, Hub 마스터와 Dev 권한 정책은 새 Suite 기준을 따른다.
+`ac`는 프로그램 실행과 운영 기록을 담당한다. `yna-matching`의 Program First 구조를 기준으로 하되, Hub 마스터와 Admin 권한 정책은 새 WORKS 기준을 따른다.
 
-Work의 기본 구조:
+AC의 기본 구조:
 
 ```txt
 Program
@@ -535,7 +537,7 @@ Program
   -> Record
 ```
 
-Work가 다루는 주요 업무:
+AC가 다루는 주요 업무:
 
 ```txt
 모집
@@ -551,10 +553,10 @@ Work가 다루는 주요 업무:
 회의록
 ```
 
-### 6.1 `work.programs`
+### 6.1 `ac.programs`
 
 ```sql
-CREATE TABLE work.programs (
+CREATE TABLE ac.programs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 프로그램 내부 ID
     program_code VARCHAR(50) UNIQUE NOT NULL,                 -- 사용자/보고서용 프로그램 코드
     name TEXT NOT NULL,                                       -- 프로그램명
@@ -570,7 +572,7 @@ CREATE TABLE work.programs (
 );
 ```
 
-### 6.2 `work.program_modules`
+### 6.2 `ac.program_modules`
 
 프로그램 안의 기능 단위이다. 모집, 평가, 멘토링, 비즈니스 매칭, 데모데이 같은 정형 기능과 커스텀 행사를 같은 방식으로 다룬다.
 
@@ -590,9 +592,9 @@ custom_event
 ```
 
 ```sql
-CREATE TABLE work.program_modules (
+CREATE TABLE ac.program_modules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 프로그램 모듈 ID
-    program_id UUID REFERENCES work.programs(id),              -- 연결 프로그램
+    program_id UUID REFERENCES ac.programs(id),              -- 연결 프로그램
     module_type VARCHAR(50) NOT NULL,                         -- recruitment/document_review/custom_event 등
     name TEXT NOT NULL,                                       -- 모듈 표시명
     description TEXT NULL,                                    -- 모듈 설명
@@ -607,12 +609,12 @@ CREATE TABLE work.program_modules (
 );
 ```
 
-### 6.3 `work.applications`
+### 6.3 `ac.applications`
 
 ```sql
-CREATE TABLE work.applications (
+CREATE TABLE ac.applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 신청서 ID
-    program_id UUID REFERENCES work.programs(id),             -- 신청 대상 프로그램
+    program_id UUID REFERENCES ac.programs(id),             -- 신청 대상 프로그램
     startup_id UUID REFERENCES hub.startups(id),              -- 신청 기업. Hub 마스터를 참조한다.
     applicant_user_id UUID REFERENCES auth.users(id),         -- 신청을 작성한 스타트업 사용자
     application_status VARCHAR(50) DEFAULT 'draft',           -- draft/submitted/reviewing/selected/rejected 등
@@ -624,21 +626,21 @@ CREATE TABLE work.applications (
 );
 ```
 
-### 6.4 `work.program_participants`
+### 6.4 `ac.program_participants`
 
 프로그램에 참여하는 스타트업, 전문가, 내부 매니저, 협력사를 연결한다. 신청서에서 선발된 스타트업도 최종적으로는 참여자 관계를 가진다.
 
 ```sql
-CREATE TABLE work.program_participants (
+CREATE TABLE ac.program_participants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 참여자 관계 ID
-    program_id UUID REFERENCES work.programs(id),              -- 연결 프로그램
+    program_id UUID REFERENCES ac.programs(id),              -- 연결 프로그램
     startup_id UUID REFERENCES hub.startups(id),               -- 참여 스타트업. 해당 없으면 NULL
     expert_id UUID REFERENCES hub.experts(id),                 -- 참여 전문가. 해당 없으면 NULL
     partner_id UUID REFERENCES hub.partners(id),               -- 참여 협력사/기관. 해당 없으면 NULL
     manager_id UUID REFERENCES hub.managers(id),               -- 내부 담당자. 해당 없으면 NULL
     participant_type VARCHAR(50) NOT NULL,                    -- startup/expert/partner/manager/external
     display_name TEXT NULL,                                   -- 외부/임시 참여자 표시명
-    source_application_id UUID REFERENCES work.applications(id), -- 신청에서 전환된 경우 원본 신청
+    source_application_id UUID REFERENCES ac.applications(id), -- 신청에서 전환된 경우 원본 신청
     status VARCHAR(50) DEFAULT 'active',                       -- active/invited/withdrawn/archived 등
     created_by UUID REFERENCES auth.users(id),                -- 생성자
     updated_by UUID REFERENCES auth.users(id),                -- 마지막 수정자
@@ -654,12 +656,12 @@ CREATE TABLE work.program_participants (
 마스터가 불명확하면 Hub 임시 마스터 생성 후 연결한다.
 ```
 
-### 6.5 `work.evaluations`
+### 6.5 `ac.evaluations`
 
 ```sql
-CREATE TABLE work.evaluations (
+CREATE TABLE ac.evaluations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 평가 ID
-    application_id UUID REFERENCES work.applications(id),     -- 평가 대상 신청서
+    application_id UUID REFERENCES ac.applications(id),     -- 평가 대상 신청서
     expert_id UUID REFERENCES hub.experts(id),                -- 배정된 전문가 마스터
     evaluator_user_id UUID REFERENCES auth.users(id),         -- 실제 로그인 평가자 계정
     score NUMERIC(5, 2) NULL,                                 -- 평가 점수
@@ -671,12 +673,12 @@ CREATE TABLE work.evaluations (
 );
 ```
 
-### 6.6 `work.mentoring_sessions`
+### 6.6 `ac.mentoring_sessions`
 
 ```sql
-CREATE TABLE work.mentoring_sessions (
+CREATE TABLE ac.mentoring_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 멘토링 세션 ID
-    program_id UUID REFERENCES work.programs(id),             -- 연결 프로그램
+    program_id UUID REFERENCES ac.programs(id),             -- 연결 프로그램
     startup_id UUID REFERENCES hub.startups(id),              -- 참여 스타트업
     expert_id UUID REFERENCES hub.experts(id),                -- 멘토/전문가
     scheduled_at TIMESTAMPTZ NULL,                            -- 예정 일시
@@ -690,15 +692,15 @@ CREATE TABLE work.mentoring_sessions (
 );
 ```
 
-### 6.7 `work.program_activities`
+### 6.7 `ac.program_activities`
 
 프로그램 또는 모듈 안에서 발생하는 실제 실행 단위이다. 정형 모듈로 표현하기 어려운 커스터마이즈 행사, 내부 회의, 외부 미팅, 워크숍, 리허설 등을 담는다.
 
 ```sql
-CREATE TABLE work.program_activities (
+CREATE TABLE ac.program_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 활동/행사 ID
-    program_id UUID REFERENCES work.programs(id),              -- 연결 프로그램
-    module_id UUID REFERENCES work.program_modules(id),        -- 연결 모듈. 프로그램 공통 활동이면 NULL 가능
+    program_id UUID REFERENCES ac.programs(id),              -- 연결 프로그램
+    module_id UUID REFERENCES ac.program_modules(id),        -- 연결 모듈. 프로그램 공통 활동이면 NULL 가능
     activity_type VARCHAR(50) NOT NULL,                       -- session/meeting/workshop/custom_event 등
     title TEXT NOT NULL,                                      -- 활동명
     description TEXT NULL,                                    -- 활동 설명
@@ -727,16 +729,16 @@ IR 리허설
 내부 운영회의
 ```
 
-### 6.8 `work.meeting_minutes`
+### 6.8 `ac.meeting_minutes`
 
 회의록은 프로그램 운영 중 발생한 핵심 안건, 논의 내용, 결정사항을 남기는 가벼운 기록이다. 후속 조치, 담당자, 기한, 참석자 정교 관리는 초기 범위에서 제외한다.
 
 ```sql
-CREATE TABLE work.meeting_minutes (
+CREATE TABLE ac.meeting_minutes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 회의록 ID
-    program_id UUID REFERENCES work.programs(id),              -- 연결 프로그램
-    module_id UUID REFERENCES work.program_modules(id),        -- 연결 모듈. 없으면 NULL
-    activity_id UUID REFERENCES work.program_activities(id),   -- 연결 활동. 없으면 NULL
+    program_id UUID REFERENCES ac.programs(id),              -- 연결 프로그램
+    module_id UUID REFERENCES ac.program_modules(id),        -- 연결 모듈. 없으면 NULL
+    activity_id UUID REFERENCES ac.program_activities(id),   -- 연결 활동. 없으면 NULL
     title TEXT NOT NULL,                                      -- 회의록 제목
     agenda TEXT NULL,                                         -- 안건
     discussion TEXT NULL,                                     -- 논의 내용
@@ -752,15 +754,15 @@ CREATE TABLE work.meeting_minutes (
 회의록 첨부파일은 공통 `hub.attachments`를 사용한다.
 
 ```txt
-hub.attachments.domain_name = work
+hub.attachments.domain_name = ac
 hub.attachments.entity_type = meeting_minutes
-hub.attachments.entity_id = work.meeting_minutes.id
+hub.attachments.entity_id = ac.meeting_minutes.id
 ```
 
 주의:
 
 ```txt
-회의록에서 Hub 마스터 변경 단서가 발견되어도 Work가 Hub 마스터를 직접 수정하지 않는다.
+회의록에서 Hub 마스터 변경 단서가 발견되어도 AC 섹션이 Hub 마스터를 직접 수정하지 않는다.
 필요하면 Hub 임시 마스터, 병합 후보, correction request 흐름으로 연결한다.
 ```
 
@@ -1052,7 +1054,7 @@ raw_payload에는 개인정보가 포함될 수 있으므로 staging도 보안/R
 CREATE TABLE hub.audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 감사 로그 ID
     actor_user_id UUID REFERENCES auth.users(id),             -- 액션 수행자
-    domain_name VARCHAR(50) NOT NULL,                         -- 액션이 발생한 서비스 도메인
+    domain_name VARCHAR(50) NOT NULL,                         -- 액션이 발생한 섹션 도메인
     entity_type VARCHAR(50) NOT NULL,                         -- 대상 엔티티 종류
     entity_id UUID NULL,                                      -- 대상 엔티티 ID
     action VARCHAR(50) NOT NULL,                              -- create/update/delete/approve/merge/download 등
@@ -1083,7 +1085,7 @@ CREATE TABLE hub.audit_logs (
 ```sql
 CREATE TABLE hub.attachments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             -- 첨부파일 메타데이터 ID
-    domain_name VARCHAR(50) NOT NULL,                         -- 파일이 속한 서비스 도메인
+    domain_name VARCHAR(50) NOT NULL,                         -- 파일이 속한 섹션 도메인
     entity_type VARCHAR(50) NOT NULL,                         -- 파일이 연결된 엔티티 종류
     entity_id UUID NOT NULL,                                  -- 파일이 연결된 엔티티 ID
     bucket_name TEXT NOT NULL,                                -- Supabase Storage bucket
@@ -1117,8 +1119,8 @@ hub 마스터:
   내부 사용자는 권한에 따라 read/write
   외부 사용자는 자기 회사/자기 배정 데이터에 연결된 일부 정보만
 
-work:
-  내부 사용자는 work 권한과 scope 기준
+ac:
+  내부 사용자는 ac 권한과 scope 기준
   전문가/스타트업은 self/company scope 기준
 
 mna/fund/management:
@@ -1160,31 +1162,31 @@ hub.master_identifiers
 hub.master_field_history
 hub.merge_candidates
 hub.merge_events
-dev.user_permissions
-dev.permission_templates
-dev.permission_audit_logs
+admin.user_permissions
+admin.permission_templates
+admin.permission_audit_logs
 hub.audit_logs
 hub.attachments
 staging.import_batches
 staging.startup_import_rows
 ```
 
-Phase 1 Work 연결 계약/mock 검증 (아래 5종은 Phase 1에서 **DB 테이블을 만들지 않는다** — in-memory mock으로 계약만 검증하고, 실제 테이블/마이그레이션은 Phase 2 Work 연결에서 생성한다. `yna_suite_api_contracts.md` §19 참고):
+Phase 1 AC 연결 계약/mock 검증 (아래 5종은 Phase 1에서 **DB 테이블을 만들지 않는다** — in-memory mock으로 계약만 검증하고, 실제 테이블/마이그레이션은 Phase 2 AC 연결에서 생성한다. `yna_suite_api_contracts.md` §19 참고):
 
 ```txt
-work.programs
-work.program_modules
-work.applications
-work.program_activities
-work.meeting_minutes
+ac.programs
+ac.program_modules
+ac.applications
+ac.program_activities
+ac.meeting_minutes
 ```
 
 우선순위 2:
 
 ```txt
-work.program_participants
-work.evaluations
-work.mentoring_sessions
+ac.program_participants
+ac.evaluations
+ac.mentoring_sessions
 project.projects
 project.milestones
 fund.funds
@@ -1221,13 +1223,13 @@ RLS 판단에 필요한 컬럼이 있는가?
 
 ## 17. 최종 요약
 
-Y&A Suite 데이터 모델의 중심은 `hub`이다.
+Y&ARCHER WORKS 데이터 모델의 중심은 `hub`이다.
 
 ```txt
 hub        = 전사 마스터와 감사 로그
-dev        = 계정과 권한
+admin      = 계정과 권한
 staging    = import 원본/매핑/정규화/실패 이력
-work       = Program First 기반 프로그램/모듈/신청/참여/활동/평가/멘토링/회의록
+ac         = Program First 기반 프로그램/모듈/신청/참여/활동/평가/멘토링/회의록
 mna        = M&A 딜
 project    = 프로젝트/마일스톤/M/M
 fund       = 펀드/LP/투자

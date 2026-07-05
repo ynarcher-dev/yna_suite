@@ -3,7 +3,7 @@
 --
 -- 목적: 2단계 비동기 병합에서 타 도메인 FK 반영이 진행 중이어도, 업무 도메인 조회가
 --       항상 최종 마스터를 가리키도록 표준 resolve view 를 제공한다.
--- 규칙: 업무 도메인 앱(work, fund, mna 등)은 hub 마스터를 직접 조인하며 COALESCE 를 반복 작성하지 않고,
+-- 규칙: 업무 도메인 앱(ac, fund, mna 등)은 hub 마스터를 직접 조인하며 COALESCE 를 반복 작성하지 않고,
 --       이 view(또는 packages/database 의 resolveMasterId helper)를 경유한다.
 
 -- 스타트업 resolve view

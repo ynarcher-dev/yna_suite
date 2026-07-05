@@ -1,7 +1,7 @@
 -- Phase 1.3 — RLS 기본 활성화 (default deny)
 -- 근거: yna_suite_data_model.md §14, yna_suite_database_operations.md §5, 0_CLAUDE.md §4
 --
--- 목적: 모든 hub/dev 업무 테이블에 RLS 를 활성화한다.
+-- 목적: 모든 hub/admin 업무 테이블에 RLS 를 활성화한다.
 --       정책(policy) 없이 RLS 만 켜면 authenticated/anon 역할에는 기본 deny 가 되어,
 --       Phase 1.4 에서 명시 허용 정책을 붙이기 전까지 테이블이 열려 있지 않다.
 --       (service_role 은 BYPASSRLS 로 서버 전용 관리/마이그레이션 작업에서만 사용)
@@ -21,6 +21,6 @@ ALTER TABLE hub.merge_events         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hub.audit_logs           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hub.attachments          ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE dev.user_permissions     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev.permission_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev.permission_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin.user_permissions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin.permission_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin.permission_audit_logs ENABLE ROW LEVEL SECURITY;

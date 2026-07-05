@@ -1,6 +1,8 @@
-# Y&A Suite RLS 정책 매트릭스 가이드
+# Y&ARCHER WORKS RLS 정책 매트릭스 가이드
 
-본 문서는 Y&A Suite의 Supabase Row Level Security 정책을 테이블별, 역할별, scope별로 정리한다. `yna_suite_auth_permissions.md`가 권한 모델의 원칙을 설명한다면, 이 문서는 실제 RLS 구현과 테스트를 위한 기준표이다.
+> [2026-07-04] 아키텍처 개편 반영: 내부 통합 앱 Y&ARCHER WORKS + 외부 포털 Y&ARCHER WORKS-GUEST(Phase 2) 2앱 체제로 전환, 권한 도메인 키 dev→admin, work→ac 교체(스키마/헬퍼/정책명 동일 적용).
+
+본 문서는 Y&ARCHER WORKS의 Supabase Row Level Security 정책을 테이블별, 역할별, scope별로 정리한다. `yna_suite_auth_permissions.md`가 권한 모델의 원칙을 설명한다면, 이 문서는 실제 RLS 구현과 테스트를 위한 기준표이다.
 
 관련 문서:
 
@@ -14,7 +16,7 @@ DB 운영: yna_suite_database_operations.md
 
 ## 1. 기본 전제
 
-RLS는 Y&A Suite 보안의 최종 방어선이다.
+RLS는 Y&ARCHER WORKS 보안의 최종 방어선이다.
 
 ```txt
 UI 권한 처리는 사용자 경험이다.
@@ -46,13 +48,13 @@ service role 우회는 서버 전용 작업에만 허용
 | `guest_expert` | 외부 전문가 |
 | `guest_startup` | 참가 스타트업 |
 | `viewer` | 제한적 읽기 전용 |
-| `no_permission` | 테스트용 권한 없음 (권한 템플릿이 아님 — `dev.user_permissions` row가 없는 계정 상태를 가리키며, RLS 차단 테스트 용도로만 사용한다) |
+| `no_permission` | 테스트용 권한 없음 (권한 템플릿이 아님 — `admin.user_permissions` row가 없는 계정 상태를 가리키며, RLS 차단 테스트 용도로만 사용한다) |
 
-역할은 기본 템플릿이며, 실제 접근은 `dev.user_permissions`의 도메인 권한과 scope를 함께 판단한다.
+역할은 기본 템플릿이며, 실제 접근은 `admin.user_permissions`의 도메인 권한과 scope를 함께 판단한다.
 
 ## 3. 도메인 권한 기본표
 
-| role_key | hub | dev | work | mna | project | fund | management |
+| role_key | hub | admin | ac | mna | project | fund | management |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `master` | RW | RW | RW | RW | RW | RW | RW |
 | `executive` | R | None | R | R | R | R | R |
@@ -104,14 +106,14 @@ fund
 주의:
 
 ```txt
-현재 dev.user_permissions는 사용자/도메인당 하나의 scope만 저장한다.
+현재 admin.user_permissions는 사용자/도메인당 하나의 scope만 저장한다.
 한 사용자가 여러 program/fund/project scope를 동시에 가져야 하면 별도 scope 테이블을 추가한다.
 ```
 
 권장 확장 테이블:
 
 ```sql
-CREATE TABLE dev.user_permission_scopes (
+CREATE TABLE admin.user_permission_scopes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id),
     domain_name VARCHAR(50) NOT NULL,
@@ -129,26 +131,26 @@ RLS 정책은 가능하면 공통 DB function을 사용한다.
 필수 helper:
 
 ```sql
-dev.can_read_domain(target_domain text)
-dev.can_write_domain(target_domain text)
-dev.get_scope_type(target_domain text)
-dev.get_scope_id(target_domain text)
-dev.has_role(target_role text)
-dev.is_master()
-dev.can_merge_master()
+admin.can_read_domain(target_domain text)
+admin.can_write_domain(target_domain text)
+admin.get_scope_type(target_domain text)
+admin.get_scope_id(target_domain text)
+admin.has_role(target_role text)
+admin.is_master()
+admin.can_merge_master()
 ```
 
 권장 helper:
 
 ```sql
-dev.can_read_hub_master(entity_type text, entity_id uuid)
-dev.can_write_hub_master(entity_type text, entity_id uuid)
-work.can_read_application(application_id uuid)
-work.can_write_application(application_id uuid)
-work.can_read_program(program_id uuid)
-work.can_write_program(program_id uuid)
-work.can_read_activity(activity_id uuid)
-work.can_write_activity(activity_id uuid)
+admin.can_read_hub_master(entity_type text, entity_id uuid)
+admin.can_write_hub_master(entity_type text, entity_id uuid)
+ac.can_read_application(application_id uuid)
+ac.can_write_application(application_id uuid)
+ac.can_read_program(program_id uuid)
+ac.can_write_program(program_id uuid)
+ac.can_read_activity(activity_id uuid)
+ac.can_write_activity(activity_id uuid)
 ```
 
 병합 resolve는 DB 함수 대신 **`hub.resolved_startups` / `hub.resolved_experts` / `hub.resolved_partners` view + `packages/database`의 `resolveMasterId` helper**를 사용한다(Phase 1.10 구현 기준, `yna_suite_data_model.md` §4.10 참고).
@@ -159,7 +161,7 @@ work.can_write_activity(activity_id uuid)
 RLS function은 SECURITY DEFINER 사용 여부를 신중히 결정한다.
 SECURITY DEFINER를 쓰는 경우 search_path를 고정한다.
 auth.uid()가 NULL인 경우 false를 반환한다.
-매 쿼리마다 dev.user_permissions 테이블을 조인하면 심각한 성능 저하가 발생하므로, RLS 헬퍼 함수는 auth.jwt()의 app_metadata에 캐싱된 권한 JSON(Custom Claims)을 무조인(No-Join)으로 파싱하도록 구현한다.
+매 쿼리마다 admin.user_permissions 테이블을 조인하면 심각한 성능 저하가 발생하므로, RLS 헬퍼 함수는 auth.jwt()의 app_metadata에 캐싱된 권한 JSON(Custom Claims)을 무조인(No-Join)으로 파싱하도록 구현한다.
 단, JWT claim 기반 판정에서도 permissions.{domain}.expires_at을 함께 확인한다. 임시 권한은 access token이 아직 유효하더라도 expires_at <= now()이면 read/write/scope helper가 false를 반환해야 한다.
 권한 변경·회수 후 즉시 차단이 필요한 경우 짧은 access token TTL, 권한 버전 claim, 세션 무효화 중 하나 이상을 운영 정책으로 함께 적용한다.
 ```
@@ -189,10 +191,10 @@ RLS 기준:
 
 ```txt
 SELECT:
-  dev.can_read_domain('hub')
+  admin.can_read_domain('hub')
 
 INSERT/UPDATE:
-  dev.can_write_domain('hub')
+  admin.can_write_domain('hub')
 
 DELETE:
   물리 삭제 금지
@@ -204,9 +206,9 @@ DELETE:
 외부 사용자 주의:
 
 ```txt
-외부 사용자(guest_startup/guest_expert)는 권한 템플릿상 hub 도메인이 None이므로
-Phase 1에서는 hub 테이블에 일절 접근하지 않는다.
-Phase 2 외부 포털에서 자기 데이터 조회/제출이 필요해지면
+외부 사용자(guest_startup/guest_expert)는 WORKS(내부 앱)에 접근하지 않으며,
+권한 템플릿상 hub 도메인이 None이므로 Phase 1에서는 hub 테이블에 일절 접근하지 않는다.
+WORKS-GUEST 앱(Phase 2)에서 자기 데이터 조회/제출이 필요해지면
 hub 테이블 직접 접근이 아니라 별도 view/RPC로 허용 필드만 제공한다.
 (외부 사용자는 hub.startups 전체 테이블을 직접 SELECT하지 않는다.)
 ```
@@ -284,13 +286,13 @@ RLS 기준:
 
 ```txt
 merge_candidates SELECT:
-  dev.can_merge_master()
+  admin.can_merge_master()
 
 merge_candidates UPDATE:
-  dev.can_merge_master()
+  admin.can_merge_master()
 
 merge_events SELECT:
-  dev.can_read_domain('hub')
+  admin.can_read_domain('hub')
   단, before/after snapshot 민감 필드 마스킹 고려
 ```
 
@@ -307,7 +309,7 @@ merge_events SELECT:
 
 ```txt
 hub.audit_logs
-dev.permission_audit_logs
+admin.permission_audit_logs
 ```
 
 권한 매트릭스:
@@ -326,13 +328,13 @@ audit log는 수정/삭제하지 않는다.
 정정이 필요하면 별도 correction log를 남긴다.
 ```
 
-## 11. Dev 권한 테이블
+## 11. Admin 권한 테이블
 
 대상:
 
 ```txt
-dev.user_permissions
-dev.permission_audit_logs
+admin.user_permissions
+admin.permission_audit_logs
 ```
 
 권한 매트릭스:
@@ -340,7 +342,7 @@ dev.permission_audit_logs
 | 사용자 | SELECT | INSERT/UPDATE | DELETE |
 | :--- | :--- | :--- | :--- |
 | `master` | 전체 | 허용 | 권한 회수 방식 |
-| `dev:read` | 전체 조회 | 불가 | 불가 |
+| `admin:read` | 전체 조회 | 불가 | 불가 |
 | 본인 | 본인 권한 조회 | 불가 | 불가 |
 | 외부 사용자 | 본인 권한 조회만 | 불가 | 불가 |
 
@@ -349,10 +351,10 @@ RLS 기준:
 ```txt
 SELECT:
   auth.uid() = user_id
-  OR dev.can_read_domain('dev')
+  OR admin.can_read_domain('admin')
 
 INSERT/UPDATE:
-  dev.can_write_domain('dev')
+  admin.can_write_domain('admin')
 
 DELETE:
   물리 삭제보다 can_read/can_write false 또는 revoke action 기록
@@ -365,13 +367,13 @@ master 권한 부여/회수는 별도 보호 조건을 둔다.
 자기 자신의 master 권한 회수는 실수 방지 확인을 둔다.
 ```
 
-## 12. Work 프로그램
+## 12. AC 프로그램
 
 대상:
 
 ```txt
-work.programs
-work.program_modules
+ac.programs
+ac.program_modules
 ```
 
 권한 매트릭스:
@@ -379,28 +381,28 @@ work.program_modules
 | 사용자 | SELECT | INSERT/UPDATE |
 | :--- | :--- | :--- |
 | `master` | 전체 | 허용 |
-| `work:read global` | 전체 | 불가 |
-| `work:write global` | 전체 | 허용 |
-| `work:read department/program` | scope 내 | 불가 |
+| `ac:read global` | 전체 | 불가 |
+| `ac:write global` | 전체 | 허용 |
+| `ac:read department/program` | scope 내 | 불가 |
 | `guest_expert` | 배정된 프로그램 일부 | 불가 |
 | `guest_startup` | 참여/신청 가능한 프로그램 일부 | 불가 |
 
 Phase 1:
 
 ```txt
-실제 Work 운영이 아니라 mock/test flow 중심이다.
+실제 AC 운영이 아니라 mock/test flow 중심이다.
 그래도 RLS 정책은 Phase 2와 같은 방향으로 검증한다.
 program_modules는 상위 program 접근권을 따른다.
-custom_event 모듈도 일반 Work 모듈과 같은 권한 기준을 적용한다.
+custom_event 모듈도 일반 AC 모듈과 같은 권한 기준을 적용한다.
 ```
 
-## 13. Work 신청/참여자
+## 13. AC 신청/참여자
 
 대상:
 
 ```txt
-work.applications
-work.program_participants
+ac.applications
+ac.program_participants
 ```
 
 권한 매트릭스:
@@ -408,8 +410,8 @@ work.program_participants
 | 사용자 | SELECT | INSERT | UPDATE |
 | :--- | :--- | :--- | :--- |
 | `master` | 전체 | 허용 | 허용 |
-| `work:read global` | 전체 | 불가 | 불가 |
-| `work:write global` | 전체 | 허용 | 허용 |
+| `ac:read global` | 전체 | 불가 | 불가 |
+| `ac:write global` | 전체 | 허용 | 허용 |
 | `business_team` | scope 내 | 허용 | 허용 |
 | `guest_startup company` | 자기 회사 신청 | 자기 회사 신청 | 제출 전/허용 상태만 |
 | `guest_expert` | 원칙적으로 직접 접근 불가 | 불가 | 불가 |
@@ -418,11 +420,11 @@ RLS 기준:
 
 ```txt
 내부 사용자:
-  dev.can_read_domain('work') + scope 조건
+  admin.can_read_domain('ac') + scope 조건
 
 참가 스타트업:
   scope_type='company'
-  AND scope_id = work.applications.startup_id
+  AND scope_id = ac.applications.startup_id
 
 쓰기:
   can_write=true
@@ -432,25 +434,25 @@ RLS 기준:
 주의:
 
 ```txt
-평가 점수와 내부 메모는 work.applications에 직접 섞지 않는다.
+평가 점수와 내부 메모는 ac.applications에 직접 섞지 않는다.
 외부 스타트업이 내부 심사 상태를 임의로 수정할 수 없게 상태 전이 정책을 둔다.
 program_participants는 내부 운영자가 관리하고, 외부 사용자는 자기 참여 관계의 허용 필드만 본다.
 ```
 
-## 14. Work 평가/멘토링
+## 14. AC 평가/멘토링
 
 대상:
 
 ```txt
-work.evaluations
-work.mentoring_sessions
+ac.evaluations
+ac.mentoring_sessions
 ```
 
 권한 매트릭스:
 
 | 사용자 | SELECT | INSERT/UPDATE |
 | :--- | :--- | :--- |
-| 내부 `work:write` | scope 내 | 허용 |
+| 내부 `ac:write` | scope 내 | 허용 |
 | `guest_expert self` | 본인 배정 건 | 불가 — Phase 2에서 설계 (아래 주의 참고) |
 | `guest_startup company` | 자기 회사 관련 공개 일정 | 제한 |
 
@@ -468,24 +470,24 @@ guest_startup:
 주의 (Phase 2 선행 결정 사항):
 
 ```txt
-외부 전문가의 평가/의견 제출은 Phase 2 외부 전문가 포털에서 설계한다.
-현재 guest_expert 템플릿은 work=read이므로 can_write 기반 RLS로는 쓰기가 불가하다.
+외부 전문가의 평가/의견 제출은 WORKS-GUEST 앱(Phase 2)에서 설계한다.
+현재 guest_expert 템플릿은 ac=read이므로 can_write 기반 RLS로는 쓰기가 불가하다.
 Phase 2에서 아래 둘 중 하나를 선택해 권한표와 RLS를 함께 갱신한다:
-  1) guest_expert에 work write(scope=self)를 부여하고 본인 작성 필드만 허용
+  1) guest_expert에 ac write(scope=self)를 부여하고 본인 작성 필드만 허용
   2) 쓰기는 별도 제출 RPC(SECURITY DEFINER)로만 받고 템플릿은 read 유지
 또한 expert_id 기반 self 판정에는 hub.experts와 auth 계정의 연결 컬럼
 (hub.experts.user_id)이 필요한데 현재 데이터 모델에 없다 —
 Phase 2에서 컬럼 추가 migration이 선행되어야 한다(evaluator_user_id 기반 판정은 가능).
 ```
 
-## 15. Work 활동/회의록
+## 15. AC 활동/회의록
 
 대상:
 
 ```txt
-work.program_activities
-work.meeting_minutes
-hub.attachments 중 domain_name='work'인 회의록 첨부파일
+ac.program_activities
+ac.meeting_minutes
+hub.attachments 중 domain_name='ac'인 회의록 첨부파일
 ```
 
 권한 매트릭스:
@@ -493,8 +495,8 @@ hub.attachments 중 domain_name='work'인 회의록 첨부파일
 | 사용자 | SELECT | INSERT/UPDATE |
 | :--- | :--- | :--- |
 | `master` | 전체 | 허용 |
-| 내부 `work:read` | scope 내 program/module/activity | 불가 |
-| 내부 `work:write` | scope 내 program/module/activity | 허용 |
+| 내부 `ac:read` | scope 내 program/module/activity | 불가 |
+| 내부 `ac:write` | scope 내 program/module/activity | 허용 |
 | `guest_expert self` | 본인 배정 활동 중 공개 가능한 항목 | 제한 |
 | `guest_startup company` | 자기 회사가 참여하는 활동 중 공개 가능한 항목 | 제한 |
 
@@ -502,15 +504,15 @@ RLS 기준:
 
 ```txt
 program_activities:
-  work.can_read_program(program_id)
+  ac.can_read_program(program_id)
   또는 연결 module의 program_id 기준 scope 확인
 
 meeting_minutes:
-  work.can_read_program(program_id)
+  ac.can_read_program(program_id)
   단, 외부 사용자는 원칙적으로 직접 접근하지 않는다.
 
 attachments:
-  hub.attachments.domain_name='work'
+  hub.attachments.domain_name='ac'
   AND entity_type='meeting_minutes'
   AND 연결 회의록 접근권 확인
 ```
@@ -520,7 +522,7 @@ attachments:
 ```txt
 회의록은 Phase 1/2에서 안건, 논의 내용, 결정사항, 첨부파일 중심의 가벼운 기록으로 제한한다.
 참석자, 후속 조치, 담당자, 기한, 공개 범위 고급 설정은 초기 RLS 범위에서 제외한다.
-회의록이 Hub 마스터 변경의 근거가 되어도 Work가 Hub 마스터를 직접 UPDATE하지 않는다.
+회의록이 Hub 마스터 변경의 근거가 되어도 AC 섹션이 Hub 마스터를 직접 UPDATE하지 않는다.
 ```
 
 ## 16. Fund/M&A/Project/Management
@@ -627,7 +629,7 @@ business_team_user -> department D
 
 ```txt
 no_permission_user는 모든 업무 테이블 SELECT 실패
-권한 없는 도메인 앱 접근 실패
+권한 없는 섹션 접근 실패
 ```
 
 읽기/쓰기 분리:
@@ -664,11 +666,11 @@ restricted 파일은 권한자만 signed URL 발급
 민감 파일 다운로드 audit log 생성
 ```
 
-Work activity/회의록:
+AC activity/회의록:
 
 ```txt
-work:read 사용자는 scope 밖 program activity 조회 실패
-work:write 사용자는 scope 내 activity와 meeting_minutes 작성 가능
+ac:read 사용자는 scope 밖 program activity 조회 실패
+ac:write 사용자는 scope 내 activity와 meeting_minutes 작성 가능
 guest_startup은 타 회사가 참여하는 activity 조회 실패
 guest_expert는 배정되지 않은 activity 조회 실패
 회의록 첨부파일은 회의록 접근권 없으면 signed URL 발급 실패
@@ -692,7 +694,7 @@ service role 없이 일반 요청이 차단되는가?
 
 ## 22. 최종 요약
 
-Y&A Suite RLS는 다음 기준을 따른다.
+Y&ARCHER WORKS RLS는 다음 기준을 따른다.
 
 ```txt
 내부 사용자는 domain permission + scope로 제한한다.

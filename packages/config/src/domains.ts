@@ -1,11 +1,16 @@
 import type { Domain } from "@yna/core";
 
 /**
- * 서비스별 배포/도메인/로컬 포트 설정.
- * (근거: yna_suite_foldering.md §1, yna_suite_environment_deployment.md §8)
+ * 앱/섹션 배포 설정. (근거: yna_suite_foldering.md §1, yna_suite_environment_deployment.md)
+ *
+ * 2026-07-04 아키텍처 개편: 도메인별 7개 앱 → 앱 2개(WORKS 내부 통합 + GUEST 외부 포털).
+ * 도메인은 이제 배포 단위가 아니라 WORKS 앱 안의 "섹션"이며, 권한으로 메뉴 노출을 제어한다.
  */
+
+export type AppKey = "works" | "guest";
+
 export interface AppConfig {
-  domain: Domain;
+  key: AppKey;
   /** 사용자에게 보이는 이름. */
   appName: string;
   /** 운영 서브도메인. */
@@ -14,22 +19,36 @@ export interface AppConfig {
   localPort: number;
 }
 
-export const APP_CONFIGS: Record<Domain, AppConfig> = {
-  hub: { domain: "hub", appName: "Y&A Hub", host: "hub.ynarcher.co.kr", localPort: 3000 },
-  dev: { domain: "dev", appName: "Y&A Dev", host: "dev.ynarcher.co.kr", localPort: 3001 },
-  work: { domain: "work", appName: "Y&A Work", host: "work.ynarcher.co.kr", localPort: 3002 },
-  mna: { domain: "mna", appName: "Y&A M&A", host: "mna.ynarcher.co.kr", localPort: 3003 },
-  project: {
-    domain: "project",
-    appName: "Y&A Project",
-    host: "project.ynarcher.co.kr",
-    localPort: 3004,
+export const APP_CONFIGS: Record<AppKey, AppConfig> = {
+  works: {
+    key: "works",
+    appName: "Y&ARCHER WORKS",
+    host: "works.ynarcher.co.kr",
+    localPort: 3000,
   },
-  fund: { domain: "fund", appName: "Y&A Fund", host: "fund.ynarcher.co.kr", localPort: 3005 },
-  management: {
-    domain: "management",
-    appName: "Y&A Management",
-    host: "management.ynarcher.co.kr",
-    localPort: 3006,
+  guest: {
+    key: "guest",
+    appName: "Y&ARCHER WORKS-GUEST",
+    host: "guest.ynarcher.co.kr",
+    localPort: 3001,
   },
+};
+
+/** WORKS 앱 내부 섹션(도메인)별 표시/경로 설정. */
+export interface SectionConfig {
+  domain: Domain;
+  /** 사이드바/스위처에 보이는 섹션 이름. */
+  label: string;
+  /** WORKS 앱 내 기준 경로. HUB는 기본 섹션이라 루트("")를 쓴다. */
+  basePath: string;
+}
+
+export const SECTION_CONFIGS: Record<Domain, SectionConfig> = {
+  hub: { domain: "hub", label: "HUB", basePath: "" },
+  admin: { domain: "admin", label: "관리", basePath: "/admin" },
+  ac: { domain: "ac", label: "AC", basePath: "/ac" },
+  mna: { domain: "mna", label: "M&A", basePath: "/mna" },
+  project: { domain: "project", label: "PROJECT", basePath: "/project" },
+  fund: { domain: "fund", label: "FUND", basePath: "/fund" },
+  management: { domain: "management", label: "MANAGEMENT", basePath: "/management" },
 };

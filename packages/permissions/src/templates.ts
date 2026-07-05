@@ -12,7 +12,7 @@ import {
  * (근거: yna_suite_auth_permissions.md §6, yna_suite_rls_policy_matrix.md §3)
  *
  * 이 매트릭스는 Dev 사용자 관리에서 역할을 부여할 때의 기본값이며,
- * dev.permission_templates seed(마이그레이션)와 동일한 값이어야 한다.
+ * admin.permission_templates seed(마이그레이션)와 동일한 값이어야 한다.
  * 실제 권한은 사용자별 override 가 가능하다(Phase 1.5).
  */
 
@@ -23,8 +23,8 @@ export type TemplateAccess = "none" | "read" | "write";
 export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateAccess>> = {
   master: {
     hub: "write",
-    dev: "write",
-    work: "write",
+    admin: "write",
+    ac: "write",
     mna: "write",
     project: "write",
     fund: "write",
@@ -32,8 +32,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   executive: {
     hub: "read",
-    dev: "none",
-    work: "read",
+    admin: "none",
+    ac: "read",
     mna: "read",
     project: "read",
     fund: "read",
@@ -41,8 +41,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   management_office: {
     hub: "read",
-    dev: "none",
-    work: "read",
+    admin: "none",
+    ac: "read",
     mna: "none",
     project: "write",
     fund: "read",
@@ -50,8 +50,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   investment_team: {
     hub: "read",
-    dev: "none",
-    work: "read",
+    admin: "none",
+    ac: "read",
     mna: "write",
     project: "write",
     fund: "write",
@@ -59,8 +59,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   business_team: {
     hub: "read",
-    dev: "none",
-    work: "write",
+    admin: "none",
+    ac: "write",
     mna: "none",
     project: "write",
     fund: "none",
@@ -68,8 +68,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   guest_expert: {
     hub: "none",
-    dev: "none",
-    work: "read",
+    admin: "none",
+    ac: "read",
     mna: "none",
     project: "none",
     fund: "none",
@@ -77,8 +77,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   guest_startup: {
     hub: "none",
-    dev: "none",
-    work: "write",
+    admin: "none",
+    ac: "write",
     mna: "none",
     project: "none",
     fund: "none",
@@ -86,8 +86,8 @@ export const ROLE_TEMPLATE_MATRIX: Record<RoleTemplate, Record<Domain, TemplateA
   },
   viewer: {
     hub: "read",
-    dev: "none",
-    work: "read",
+    admin: "none",
+    ac: "read",
     mna: "none",
     project: "none",
     fund: "none",

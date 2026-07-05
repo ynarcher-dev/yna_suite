@@ -257,9 +257,21 @@ Phase 1의 목표는 화면 수를 늘리는 것이 아니라, **이후 Work/Fun
     *   심각도 높음 4건(guest 권한 충돌 2건, migration_strategy DDL 드리프트, Temporary Masters 라우트/명세 공백) 해소 완료.
     *   중간 15건·낮음 17건도 일괄 보완. 항목별 해소 방식은 6_docs_review.md 체크박스에 부기.
 
+### [x] Phase 1.15 아키텍처 개편 — Y&ARCHER WORKS 단일 내부 앱 + GUEST 외부 앱
+*(근거: docs_jm/4_memo.md 이슈32 — 2026-07-04 기획자 결정)*
+> 진행: 다중 앱/서브도메인(hub/dev/work/mna/project/fund/management 7개) 구조를 **WORKS 단일 내부 앱 + GUEST 외부 앱** 2앱으로 통합(2026-07-04). 도메인/스키마 키 `dev`→`admin`, `work`→`ac`. docs 22개 전면 개편 + 코드(패키지/마이그레이션/앱) 전환. typecheck/lint 18 태스크·테스트 3패키지·works 빌드(28 라우트)+smoke(HUB/관리 섹션 200) 통과, 마이그레이션 SQL 173문 파싱 OK.
+
+*   **[x] 서비스명·섹션 체계 확정**
+    *   플랫폼명 **Y&ARCHER WORKS**. 내부 앱 WORKS(works.ynarcher.co.kr) 안에 7개 섹션: HUB(hub)·관리 ADMIN(admin, 구 dev)·AC(ac, 구 work)·M&A·PROJECT·FUND·MANAGEMENT. 외부 포털 **WORKS-GUEST**(guest.ynarcher.co.kr, Phase 2 placeholder).
+*   **[x] 도메인/스키마 키 교체 (dev→admin, work→ac)**
+    *   `packages/core` DOMAINS, `packages/config`(APP_CONFIGS 2앱 + SECTION_CONFIGS), `packages/permissions`(템플릿·테스트), `supabase/migrations` 10개 + config.toml hook(admin.custom_access_token_hook). 역할(role_key) 8종·hub/mna/project/fund/management/staging는 유지.
+*   **[x] 앱 통합 (apps/hub + apps/dev → apps/works)**
+    *   구 Dev 앱을 관리 섹션 `/admin/*` 라우트로 이동, 권한 기반 nav(`buildWorksNav` — hub/admin 섹션별 노출), 섹션 스위처(`buildSectionLinks`), AppShell 하나로 통합. `apps/hub`→`apps/works`(@yna/works), 구 placeholder 앱(work/fund/mna/project/management) 제거, `apps/guest` placeholder 신설, work-mock→ac-mock, `/api/mock/work`→`/api/mock/ac`.
+*   **[ ] 미검증(Docker 필요)**: 실제 로그인·RLS·gen types·크로스오리진(works↔guest)은 여전히 미검증 — Phase 2/스테이징에서.
+
 ---
 
-## 4. Phase 2: Y&A Work 연결 (중간)
+## 4. Phase 2: AC 섹션 연결 (구 Y&A Work)
 
 첫 번째 실제 도메인 앱으로 Work를 붙입니다. `yna-matching`의 Program First 흐름을 원형으로 삼되, Hub 마스터·Dev 권한·병합 정책은 새 Suite 기준을 따릅니다.
 *(근거: yna_suite_existing_source_alignment.md, yna_suite_information_architecture.md §6, yna_suite_data_model.md §6)*

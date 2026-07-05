@@ -17,7 +17,7 @@ describe("canWrite → canRead 강제", () => {
 describe("만료 임시 권한 즉시 차단", () => {
   it("expires_at <= now 이면 read/write 모두 false", () => {
     const perms: PermissionMap = {
-      work: {
+      ac: {
         can_read: true,
         can_write: true,
         scope_type: "company",
@@ -25,22 +25,22 @@ describe("만료 임시 권한 즉시 차단", () => {
         expires_at: "2026-07-02T23:59:59.000Z",
       },
     };
-    expect(isExpired(perms.work!, NOW)).toBe(true);
-    expect(canRead(perms, "work", NOW)).toBe(false);
-    expect(canWrite(perms, "work", NOW)).toBe(false);
+    expect(isExpired(perms.ac!, NOW)).toBe(true);
+    expect(canRead(perms, "ac", NOW)).toBe(false);
+    expect(canWrite(perms, "ac", NOW)).toBe(false);
   });
 
   it("미래 만료는 유효", () => {
     const perms: PermissionMap = {
-      work: {
+      ac: {
         can_read: true,
         can_write: false,
         scope_type: "self",
         expires_at: "2026-08-01T00:00:00.000Z",
       },
     };
-    expect(canRead(perms, "work", NOW)).toBe(true);
-    expect(canWrite(perms, "work", NOW)).toBe(false);
+    expect(canRead(perms, "ac", NOW)).toBe(true);
+    expect(canWrite(perms, "ac", NOW)).toBe(false);
   });
 });
 
