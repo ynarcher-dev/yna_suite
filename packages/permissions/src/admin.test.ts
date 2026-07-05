@@ -120,11 +120,11 @@ describe("permissionEquals / diffPermissions", () => {
   it("변경된 도메인만 diff 로 낸다", () => {
     const before: PermissionMap = {
       hub: { can_read: true, can_write: false, scope_type: "global" },
-      work: { can_read: true, can_write: true, scope_type: "global" },
+      ac: { can_read: true, can_write: true, scope_type: "global" },
     };
     const after: PermissionMap = {
       hub: { can_read: true, can_write: true, scope_type: "global" },
-      work: { can_read: true, can_write: true, scope_type: "global" },
+      ac: { can_read: true, can_write: true, scope_type: "global" },
       fund: { can_read: true, can_write: false, scope_type: "global" },
     };
     const changes = diffPermissions(before, after);
@@ -140,18 +140,18 @@ describe("permissionEquals / diffPermissions", () => {
 });
 
 describe("master 수준 변경 판단", () => {
-  it("dev write 부여는 master 수준 변경이다", () => {
+  it("admin write 부여는 master 수준 변경이다", () => {
     const before: PermissionMap = { hub: { can_read: true, can_write: false, scope_type: "global" } };
     const after: PermissionMap = {
       hub: { can_read: true, can_write: false, scope_type: "global" },
-      dev: { can_read: true, can_write: true, scope_type: "global" },
+      admin: { can_read: true, can_write: true, scope_type: "global" },
     };
     expect(isMasterLevelChange(before, after)).toBe(true);
   });
 
-  it("dev write 변화 없으면 master 수준 아님", () => {
-    const before: PermissionMap = { dev: { can_read: true, can_write: false, scope_type: "global" } };
-    const after: PermissionMap = { dev: { can_read: true, can_write: false, scope_type: "global" } };
+  it("admin write 변화 없으면 master 수준 아님", () => {
+    const before: PermissionMap = { admin: { can_read: true, can_write: false, scope_type: "global" } };
+    const after: PermissionMap = { admin: { can_read: true, can_write: false, scope_type: "global" } };
     expect(isMasterLevelChange(before, after)).toBe(false);
   });
 
@@ -165,31 +165,31 @@ describe("applyOverrides", () => {
   it("override 로 도메인을 덮어쓰고 null 로 제거한다", () => {
     const base: PermissionMap = {
       hub: { can_read: true, can_write: false, scope_type: "global" },
-      work: { can_read: true, can_write: true, scope_type: "global" },
+      ac: { can_read: true, can_write: true, scope_type: "global" },
     };
     const result = applyOverrides(base, {
       hub: { can_read: true, can_write: true, scope_type: "global" },
-      work: null,
+      ac: null,
     });
     expect(result.hub?.can_write).toBe(true);
-    expect(result.work).toBeUndefined();
+    expect(result.ac).toBeUndefined();
   });
 });
 
 describe("externalLinkGrant", () => {
-  it("guest_startup 은 work company scope + startup_id, hub/dev 없음", () => {
+  it("guest_startup 은 ac company scope + startup_id, hub/admin 없음", () => {
     const { role, permissions } = externalLinkGrant("guest_startup", "startup-1");
     expect(role).toBe("guest_startup");
-    expect(permissions.work?.scope_type).toBe("company");
-    expect(permissions.work?.scope_id).toBe("startup-1");
+    expect(permissions.ac?.scope_type).toBe("company");
+    expect(permissions.ac?.scope_id).toBe("startup-1");
     expect(permissions.hub).toBeUndefined();
-    expect(permissions.dev).toBeUndefined();
+    expect(permissions.admin).toBeUndefined();
   });
 
-  it("guest_expert 는 work self scope + expert_id", () => {
+  it("guest_expert 는 ac self scope + expert_id", () => {
     const { permissions } = externalLinkGrant("guest_expert", "expert-9");
-    expect(permissions.work?.scope_type).toBe("self");
-    expect(permissions.work?.scope_id).toBe("expert-9");
+    expect(permissions.ac?.scope_type).toBe("self");
+    expect(permissions.ac?.scope_id).toBe("expert-9");
     expect(permissions.hub).toBeUndefined();
   });
 });

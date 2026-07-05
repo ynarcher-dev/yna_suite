@@ -21,7 +21,7 @@ CREATE TABLE hub.startups (
     address TEXT NULL,                                         -- 본점/사업장 주소
     industry TEXT NULL,                                        -- 산업 분류 또는 내부 태그
     stage VARCHAR(50) NULL,                                    -- 예비창업, Seed, Series A 등 성장 단계
-    source_domain VARCHAR(50) NULL,                            -- 최초 유입 서비스(work, fund, mna 등)
+    source_domain VARCHAR(50) NULL,                            -- 최초 유입 서비스(ac, fund, mna 등)
     source_record_id UUID NULL,                               -- 최초 유입 서비스의 원본 레코드 ID
     verification_status VARCHAR(50) DEFAULT 'pending',        -- pending/verified/rejected/needs_review/temporary 등 마스터 검증 상태
     status VARCHAR(50) DEFAULT 'active',                      -- active/merged/archived/deleted 등 생명주기 상태
@@ -40,7 +40,7 @@ CREATE INDEX startups_normalized_name_idx ON hub.startups (normalized_name); -- 
 CREATE INDEX startups_status_idx ON hub.startups (status);    -- active/merged/archived 목록 필터링용
 
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON hub.startups
-  FOR EACH ROW EXECUTE FUNCTION dev.set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION admin.set_updated_at();
 
 -- 4.2 전문가/멘토/평가위원 마스터 원장
 CREATE TABLE hub.experts (
@@ -69,7 +69,7 @@ CREATE INDEX experts_normalized_name_idx ON hub.experts (normalized_name);
 CREATE INDEX experts_status_idx ON hub.experts (status);
 
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON hub.experts
-  FOR EACH ROW EXECUTE FUNCTION dev.set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION admin.set_updated_at();
 
 -- 4.3 협력사/자문사/LP/기관 파트너 마스터 원장
 CREATE TABLE hub.partners (
@@ -103,7 +103,7 @@ CREATE INDEX partners_business_number_idx
   WHERE business_number IS NOT NULL;                          -- 사업자번호는 중복 후보 판단에 강하게 반영(unique 아님)
 
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON hub.partners
-  FOR EACH ROW EXECUTE FUNCTION dev.set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION admin.set_updated_at();
 
 -- 4.4 내부 임직원/심사역 프로필 (Supabase Auth 계정과 1:1)
 CREATE TABLE hub.managers (
@@ -127,4 +127,4 @@ COMMENT ON TABLE hub.managers IS '내부 임직원/심사역 프로필 (auth.use
 CREATE INDEX managers_status_idx ON hub.managers (status);
 
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON hub.managers
-  FOR EACH ROW EXECUTE FUNCTION dev.set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION admin.set_updated_at();

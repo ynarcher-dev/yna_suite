@@ -30,6 +30,16 @@
 
 ## 진행 기록
 
+### [2026-07-04] [기기: claude 원격 세션] Phase 1.15 아키텍처 개편 (Y&ARCHER WORKS 2앱)
+*   **완료**:
+    *   **다중 앱 → 2앱 통합**: 7개 서비스 앱/서브도메인을 **WORKS 단일 내부 앱(apps/works, 7개 섹션)** + **WORKS-GUEST 외부 앱(apps/guest, Phase 2 placeholder)** 으로 통합. 상세 경위는 4_memo 이슈32.
+    *   **키 교체 dev→admin, work→ac**: packages/core·config·permissions, supabase/migrations 10개 + config.toml hook. `packages/config`에 APP_CONFIGS(works/guest)·SECTION_CONFIGS(7섹션 경로) 신설.
+    *   **앱 통합**: 구 apps/dev → apps/works의 `/admin/*` 관리 섹션(admin-data/components/admin), 권한 기반 nav(`buildWorksNav`)·섹션 스위처(`buildSectionLinks`)·`sectionOfPath` 게이트. apps/hub→apps/works, 구 placeholder 앱 5개 제거, apps/guest 신설, work-mock→ac-mock.
+    *   **docs 22개 전면 개편**: 명칭 Y&ARCHER WORKS 통일, dev→admin·work→ac, 2앱 도메인(works/guest.ynarcher.co.kr)·포트(3000/3001)·배포. 파일명·섹션 번호 유지.
+*   **현재 상태**: typecheck/lint 18 태스크·테스트 3패키지 통과, works 빌드 28 라우트 + smoke(/=WORKS·HUB 200, /admin/users=WORKS·관리 200, /temporary-masters·/domain-test 200), 마이그레이션 SQL 173문 파싱 OK.
+*   **다음 작업**: Phase 2 AC 섹션(구 Work) 연결 — apps/works 안에 `/ac/*` 라우트로 구현. 문서 후속 3건(식별자 부분 unique·experts.user_id migration, guest_expert 제출 방식)도 Phase 2 전 처리.
+*   **주의점**: Docker 미설치로 실제 로그인·RLS·gen types·works↔guest 크로스오리진 미검증(스테이징에서). 로컬은 dev 폴백 세션(master 권한).
+
 ### [2026-07-04] [기기: claude 원격 세션] Phase 1.14 설계 문서 정합성 보완
 *   **완료**:
     *   **문서 교차 리뷰 36건 전부 보완**(`6_docs_review.md` 높음 4·중간 15·낮음 17): docs 15개 + docs_jm 3개 문서 수정. 기준 원칙 = "실구현 기준으로 공식 문서를 맞춘다". 기획자 방향 결정 4건(외부 사용자 지금은 잠금 / 임시 마스터 화면 신설 / 36건 전부 / 개인정보 삭제 절충안) 반영 — 상세는 4_memo 이슈31.

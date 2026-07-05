@@ -1,6 +1,6 @@
-# Y&A Suite 기존 소스 반영 가이드
+# Y&ARCHER WORKS 기존 소스 반영 가이드
 
-본 문서는 기존 구현체인 `yna-db`와 `yna-matching`을 새 Y&A Suite에 어떻게 반영할지 정의한다. 핵심 원칙은 다음이다.
+본 문서는 기존 구현체인 `yna-db`와 `yna-matching`을 새 Y&ARCHER WORKS에 어떻게 반영할지 정의한다. 핵심 원칙은 다음이다.
 
 ```txt
 정책, DB 경계, 권한, RLS는 새 Suite 기준을 따른다.
@@ -60,7 +60,7 @@ Dev는 계정, 권한, scope, 권한 감사 로그의 주인이다.
 Work는 프로그램 실행 기록, 신청, 평가, 참여, 활동, 성과의 주인이다.
 Work는 Hub 마스터를 직접 수정하지 않는다.
 Work에서 새 대상이 유입되면 Hub 임시 마스터와 병합 후보 흐름을 탄다.
-권한은 dev.user_permissions와 RLS를 최종 기준으로 판단한다.
+권한은 admin.user_permissions와 RLS를 최종 기준으로 판단한다.
 민감 액션은 audit log를 남긴다.
 ```
 
@@ -177,7 +177,7 @@ Mock/Test flow에는 program, application, temporary master, merge candidate 흐
 Phase 2:
 
 ```txt
-Y&A Work를 첫 실제 도메인 앱으로 붙인다.
+AC 섹션(구 Y&A Work)을 첫 실제 도메인 연결로 붙인다.
 yna-matching의 Program First 흐름을 기준으로 Work 화면과 업무 모듈을 구현한다.
 모집, 참여자, 평가, 오리엔테이션, 멘토링, 비즈니스 매칭, 데모데이, 성과관리를 순차적으로 붙인다.
 custom activity와 meeting minutes는 Work 운영 기록의 기본 기능으로 포함한다.

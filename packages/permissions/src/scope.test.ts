@@ -7,7 +7,7 @@ const NOW = new Date("2026-07-03T00:00:00.000Z");
 describe("scope 판단", () => {
   const perms: PermissionMap = {
     hub: { can_read: true, can_write: true, scope_type: "global" },
-    work: {
+    ac: {
       can_read: true,
       can_write: true,
       scope_type: "company",
@@ -18,10 +18,10 @@ describe("scope 판단", () => {
   it("scope_type/scope_id 를 반환", () => {
     expect(scopeTypeOf(perms, "hub", NOW)).toBe("global");
     expect(scopeIdOf(perms, "hub", NOW)).toBeNull();
-    expect(scopeTypeOf(perms, "work", NOW)).toBe("company");
-    expect(scopeIdOf(perms, "work", NOW)).toBe("startup-1");
+    expect(scopeTypeOf(perms, "ac", NOW)).toBe("company");
+    expect(scopeIdOf(perms, "ac", NOW)).toBe("startup-1");
     expect(hasGlobalScope(perms, "hub", NOW)).toBe(true);
-    expect(hasGlobalScope(perms, "work", NOW)).toBe(false);
+    expect(hasGlobalScope(perms, "ac", NOW)).toBe(false);
   });
 
   it("접근 불가 도메인은 null", () => {
@@ -31,7 +31,7 @@ describe("scope 판단", () => {
 
   it("만료 임시 권한이면 scope 무효", () => {
     const expired: PermissionMap = {
-      work: {
+      ac: {
         can_read: true,
         can_write: true,
         scope_type: "company",
@@ -39,7 +39,7 @@ describe("scope 판단", () => {
         expires_at: "2026-07-02T00:00:00.000Z",
       },
     };
-    expect(scopeTypeOf(expired, "work", NOW)).toBeNull();
-    expect(scopeIdOf(expired, "work", NOW)).toBeNull();
+    expect(scopeTypeOf(expired, "ac", NOW)).toBeNull();
+    expect(scopeIdOf(expired, "ac", NOW)).toBeNull();
   });
 });

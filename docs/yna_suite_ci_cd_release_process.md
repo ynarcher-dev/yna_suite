@@ -1,8 +1,10 @@
-# Y&A Suite CI/CD 및 릴리즈 운영 가이드
+# Y&ARCHER WORKS CI/CD 및 릴리즈 운영 가이드
 
-본 문서는 Y&A Suite의 브랜치 전략, PR 검증, CI 체크, DB migration 반영, staging 검증, production 배포 절차를 정의한다.
+> 2026-07-04 아키텍처 개편: 서비스별 7개 앱 구조를 **WORKS 단일 내부 앱(apps/works) + GUEST 외부 포털(apps/guest)** 2앱 구조로 변경했다. 본 문서는 개편 기준으로 갱신되었다.
 
-Y&A Suite는 여러 앱을 독립 배포하지만 인증, 권한, DB, 마스터 데이터가 공유되므로 배포 순서와 검증 기준이 중요하다.
+본 문서는 Y&ARCHER WORKS의 브랜치 전략, PR 검증, CI 체크, DB migration 반영, staging 검증, production 배포 절차를 정의한다.
+
+Y&ARCHER WORKS는 WORKS/GUEST 2개 앱을 독립 배포하지만 인증, 권한, DB, 마스터 데이터가 공유되므로 배포 순서와 검증 기준이 중요하다.
 
 관련 문서:
 
@@ -22,7 +24,7 @@ CI/CD는 다음 원칙을 따른다.
 production은 항상 staging 검증 후 배포한다.
 DB migration은 앱 배포와 순서를 명확히 맞춘다.
 RLS 변경은 자동/수동 테스트를 모두 통과해야 한다.
-공통 패키지 변경은 영향 앱을 모두 확인한다.
+공통 패키지 변경은 영향 앱(works/guest)을 모두 확인한다.
 preview는 production Supabase에 연결하지 않는다.
 릴리즈 결과와 rollback 가능성을 기록한다.
 ```
@@ -61,7 +63,7 @@ DB migration 포함 PR은 별도 라벨 부여
 lint
 typecheck
 unit test
-affected app build
+affected app build (works/guest 2앱 기준 — 앱 내부 변경은 해당 앱만, 공통 패키지 변경은 두 앱 모두)
 문서 변경 필요 여부 확인
 권한/RLS 영향 여부 확인
 ```
@@ -72,13 +74,13 @@ affected app build
 pnpm lint
 pnpm typecheck
 pnpm test
-turbo build --filter=@yna/hub
+turbo build --filter=@yna/works
 ```
 
 공통 패키지 변경 시:
 
 ```txt
-packages/ui 변경 -> 영향을 받는 모든 앱 build
+packages/ui 변경 -> 영향을 받는 앱(works/guest) 모두 build
 packages/permissions 변경 -> 권한 관련 unit/e2e test
 packages/master-data 변경 -> 정규화/병합 후보 unit test
 packages/database 변경 -> query/RLS smoke test
@@ -208,7 +210,7 @@ RLS 변경 PR은 `yna_suite_rls_policy_matrix.md` 갱신 여부를 확인한다.
 새 환경변수를 추가할 때는 다음을 함께 처리한다.
 
 ```txt
-apps/{service}/.env.example 갱신
+apps/works 또는 apps/guest의 .env.example 갱신
 루트 .env.example 갱신 필요 여부 확인
 yna_suite_environment_deployment.md 갱신
 Vercel project 환경변수 등록
@@ -269,10 +271,10 @@ staging smoke test:
 
 ```txt
 로그인 가능
-Hub 접속 가능
-Dev 접속 가능
-권한 없는 사용자 차단
-Hub 마스터 검색 가능
+WORKS 접속 가능 (루트 = HUB 섹션)
+관리 섹션(/admin) 접속 가능
+권한 없는 사용자 차단 (권한 없는 섹션 메뉴 미노출 포함)
+HUB 마스터 검색 가능
 임시 마스터 생성 가능
 중복 후보 생성 가능
 병합 승인 가능
@@ -332,8 +334,8 @@ rollback 방법
 예시:
 
 ```txt
-Release: 2026-07-03 Hub/Dev Phase 1
-Apps: hub, dev
+Release: 2026-07-03 WORKS Phase 1 (HUB/관리 섹션)
+Apps: works
 Migrations: 20260703120000_create_hub_master_tables.sql
 RLS: hub.startups read/write policies
 Smoke: passed
@@ -487,7 +489,7 @@ smoke test 통과
 
 ## 18. 최종 요약
 
-Y&A Suite의 릴리즈 운영은 다음을 핵심으로 한다.
+Y&ARCHER WORKS의 릴리즈 운영은 다음을 핵심으로 한다.
 
 ```txt
 PR에서 영향 범위를 명확히 한다.

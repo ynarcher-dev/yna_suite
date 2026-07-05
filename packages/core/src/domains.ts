@@ -1,12 +1,12 @@
 /**
- * Y&A Suite 도메인/역할/스코프 상수.
+ * Y&ARCHER WORKS 도메인/역할/스코프 상수.
  * (근거: yna_suite_auth_permissions.md, yna_suite_rls_policy_matrix.md, 0_CLAUDE.md §4)
  *
  * 여기 값은 권한 판단(packages/permissions)·RLS·UI 메뉴 노출의 단일 기준이다.
  */
 
-/** 배포 단위 서비스 도메인 (= Supabase 논리 스키마 이름과 동일). */
-export const DOMAINS = ["hub", "dev", "work", "mna", "project", "fund", "management"] as const;
+/** WORKS 앱 내부 섹션 도메인 (= Supabase 논리 스키마 이름과 동일). admin=관리(구 dev), ac=액셀러레이팅(구 work). */
+export const DOMAINS = ["hub", "admin", "ac", "mna", "project", "fund", "management"] as const;
 
 export type Domain = (typeof DOMAINS)[number];
 
@@ -30,7 +30,7 @@ export const SCOPE_TYPES = [
 ] as const;
 export type ScopeType = (typeof SCOPE_TYPES)[number];
 
-/** 권한 템플릿(역할). Dev 사용자 관리에서 부여한다. */
+/** 권한 템플릿(역할). 관리(ADMIN) 섹션의 사용자 관리에서 부여한다. */
 export const ROLE_TEMPLATES = [
   "master",
   "executive",

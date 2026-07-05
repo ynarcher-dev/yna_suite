@@ -36,74 +36,7 @@ importers:
         specifier: ^8.18.0
         version: 8.62.1(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
 
-  apps/dev:
-    dependencies:
-      '@supabase/ssr':
-        specifier: ^0.5.2
-        version: 0.5.2(@supabase/supabase-js@2.110.0)
-      '@supabase/supabase-js':
-        specifier: ^2.47.0
-        version: 2.110.0
-      '@tanstack/react-query':
-        specifier: ^5.62.0
-        version: 5.101.2(react@19.2.7)
-      '@yna/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
-      '@yna/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@yna/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@yna/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@yna/permissions':
-        specifier: workspace:*
-        version: link:../../packages/permissions
-      '@yna/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@yna/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
-      lucide-react:
-        specifier: ^0.468.0
-        version: 0.468.0(react@19.2.7)
-      next:
-        specifier: ^15.1.0
-        version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.7
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.7(react@19.2.7)
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.2
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.17)
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.5.2(postcss@8.5.16)
-      postcss:
-        specifier: ^8.4.49
-        version: 8.5.16
-      tailwindcss:
-        specifier: ^3.4.0
-        version: 3.4.19
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
-  apps/hub:
+  apps/works:
     dependencies:
       '@supabase/ssr':
         specifier: ^0.5.2

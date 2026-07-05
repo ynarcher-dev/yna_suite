@@ -62,10 +62,10 @@ ALTER TABLE staging.startup_import_rows ENABLE ROW LEVEL SECURITY;
 
 GRANT USAGE ON SCHEMA staging TO authenticated;
 
-CREATE POLICY "import batches read"   ON staging.import_batches FOR SELECT TO authenticated USING (dev.can_read_domain('hub'));
-CREATE POLICY "import batches insert" ON staging.import_batches FOR INSERT TO authenticated WITH CHECK (dev.can_write_domain('hub'));
-CREATE POLICY "import batches update" ON staging.import_batches FOR UPDATE TO authenticated USING (dev.can_write_domain('hub')) WITH CHECK (dev.can_write_domain('hub'));
+CREATE POLICY "import batches read"   ON staging.import_batches FOR SELECT TO authenticated USING (admin.can_read_domain('hub'));
+CREATE POLICY "import batches insert" ON staging.import_batches FOR INSERT TO authenticated WITH CHECK (admin.can_write_domain('hub'));
+CREATE POLICY "import batches update" ON staging.import_batches FOR UPDATE TO authenticated USING (admin.can_write_domain('hub')) WITH CHECK (admin.can_write_domain('hub'));
 
-CREATE POLICY "import rows read"   ON staging.startup_import_rows FOR SELECT TO authenticated USING (dev.can_read_domain('hub'));
-CREATE POLICY "import rows insert" ON staging.startup_import_rows FOR INSERT TO authenticated WITH CHECK (dev.can_write_domain('hub'));
-CREATE POLICY "import rows update" ON staging.startup_import_rows FOR UPDATE TO authenticated USING (dev.can_write_domain('hub')) WITH CHECK (dev.can_write_domain('hub'));
+CREATE POLICY "import rows read"   ON staging.startup_import_rows FOR SELECT TO authenticated USING (admin.can_read_domain('hub'));
+CREATE POLICY "import rows insert" ON staging.startup_import_rows FOR INSERT TO authenticated WITH CHECK (admin.can_write_domain('hub'));
+CREATE POLICY "import rows update" ON staging.startup_import_rows FOR UPDATE TO authenticated USING (admin.can_write_domain('hub')) WITH CHECK (admin.can_write_domain('hub'));

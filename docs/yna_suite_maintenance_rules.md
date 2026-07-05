@@ -1,6 +1,6 @@
-# Y&A Suite 유지보수 및 코드 작성 규칙 가이드
+# Y&ARCHER WORKS 유지보수 및 코드 작성 규칙 가이드
 
-본 문서는 Y&A Suite의 코드 유지보수성을 지키기 위한 개발 규칙을 정의한다. 목표는 코드가 단순히 지금 동작하는 데서 끝나지 않고, 다음 사람이 안전하게 읽고 수정할 수 있는 구조를 유지하는 것이다.
+본 문서는 Y&ARCHER WORKS의 코드 유지보수성을 지키기 위한 개발 규칙을 정의한다. 목표는 코드가 단순히 지금 동작하는 데서 끝나지 않고, 다음 사람이 안전하게 읽고 수정할 수 있는 구조를 유지하는 것이다.
 
 핵심 원칙:
 
@@ -48,11 +48,10 @@ fixture/mock 데이터
 금지:
 
 ```txt
-apps/work -> apps/hub
-apps/fund -> apps/work
-apps/dev -> apps/hub
-packages/ui -> apps/work
-packages/master-data -> apps/hub
+apps/works -> apps/guest (앱 간 직접 import 금지)
+apps/guest -> apps/works
+packages/ui -> apps/works (공통 UI가 앱을 참조 금지)
+packages/master-data -> apps/works (도메인 로직이 앱을 참조 금지)
 ```
 
 허용:
@@ -81,7 +80,7 @@ DB client/query helper: packages/database
 나쁜 구조:
 
 ```txt
-apps/hub/startups/page.tsx
+apps/works/src/app/(app)/startups/page.tsx
   조회
   필터
   테이블
@@ -377,7 +376,7 @@ RLS 영향을 고려했는가?
 
 ## 15. 최종 요약
 
-Y&A Suite의 유지보수 규칙은 다음을 핵심으로 한다.
+Y&ARCHER WORKS의 유지보수 규칙은 다음을 핵심으로 한다.
 
 ```txt
 수동 작성 파일은 500줄 이하를 원칙으로 한다.

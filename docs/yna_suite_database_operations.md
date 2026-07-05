@@ -1,6 +1,8 @@
-# Y&A Suite DB 운영 규칙 가이드
+# Y&ARCHER WORKS DB 운영 규칙 가이드
 
-본 문서는 Y&A Suite의 데이터베이스 운영, schema 변경, migration, RLS, 운영 데이터 수정, 감사 로그에 대한 공통 규칙을 정의한다.
+> 2026-07-04 아키텍처 개편: 스키마 키 dev→admin, work→ac. (dev/staging은 환경명이라 유지)
+
+본 문서는 Y&ARCHER WORKS의 데이터베이스 운영, schema 변경, migration, RLS, 운영 데이터 수정, 감사 로그에 대한 공통 규칙을 정의한다.
 
 이 문서는 기존 문서의 세부 내용을 반복하지 않는다. 대신 여러 문서에 흩어진 DB 관련 원칙을 운영 규칙으로 모아, 개발과 배포 중 반드시 따라야 할 기준으로 사용한다.
 
@@ -16,7 +18,7 @@
 
 ## 1. 핵심 원칙
 
-Y&A Suite의 DB 운영은 다음 원칙을 따른다.
+Y&ARCHER WORKS의 DB 운영은 다음 원칙을 따른다.
 
 ```txt
 운영 DB 직접 수정 금지
@@ -59,7 +61,7 @@ Migration 파일은 `supabase/migrations`에서 관리한다.
 ```txt
 YYYYMMDDHHMMSS_create_hub_startups.sql
 YYYYMMDDHHMMSS_add_startup_identifiers.sql
-YYYYMMDDHHMMSS_update_work_rls_policies.sql
+YYYYMMDDHHMMSS_update_ac_rls_policies.sql
 ```
 
 Migration 작성 원칙:
@@ -103,7 +105,7 @@ audit log 대상인가?
 
 ## 5. RLS 운영 규칙
 
-RLS는 Y&A Suite 보안의 최종 방어선이다.
+RLS는 Y&ARCHER WORKS 보안의 최종 방어선이다.
 
 원칙:
 
@@ -205,7 +207,7 @@ service role을 사용하는 작업은 가능한 한 audit log를 남긴다.
 
 ## 8. 삭제 규칙
 
-Y&A Suite는 물리 삭제보다 soft delete를 우선한다.
+Y&ARCHER WORKS는 물리 삭제보다 soft delete를 우선한다.
 
 예외:
 
@@ -313,7 +315,7 @@ service role 기반 운영 작업
 감사 로그 위치:
 
 ```txt
-권한 변경: dev.permission_audit_logs
+권한 변경: admin.permission_audit_logs
 일반 민감 액션: hub.audit_logs
 마스터 병합: hub.merge_events + hub.audit_logs
 import 작업: staging.import_batches + staging.*_import_rows
@@ -466,7 +468,7 @@ production 적용 결과를 확인했는가?
 
 ## 18. 최종 요약
 
-Y&A Suite의 DB 운영은 다음 규칙을 핵심으로 한다.
+Y&ARCHER WORKS의 DB 운영은 다음 규칙을 핵심으로 한다.
 
 ```txt
 DB 변경은 migration으로만 관리한다.
@@ -479,4 +481,4 @@ service role은 서버 전용이며 최소 사용한다.
 production 반영 전 staging에서 검증한다.
 ```
 
-DB는 Y&A Suite의 가장 중요한 운영 자산이다. 화면은 고칠 수 있지만, 데이터 이력과 권한 경계가 깨지면 신뢰를 회복하기 어렵다. 따라서 DB 변경은 항상 보수적으로, 기록 가능하게, 되돌릴 수 있게 설계한다.
+DB는 Y&ARCHER WORKS의 가장 중요한 운영 자산이다. 화면은 고칠 수 있지만, 데이터 이력과 권한 경계가 깨지면 신뢰를 회복하기 어렵다. 따라서 DB 변경은 항상 보수적으로, 기록 가능하게, 되돌릴 수 있게 설계한다.

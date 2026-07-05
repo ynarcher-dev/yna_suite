@@ -10,6 +10,6 @@ ALTER TABLE hub.audit_logs
     ADD COLUMN IF NOT EXISTS request_id TEXT NULL;                 -- 요청 상관관계 ID (req_<uuid>)
 COMMENT ON COLUMN hub.audit_logs.request_id IS '동일 요청에서 발생한 감사 항목 상관관계 ID (audit 표준 §5)';
 
-ALTER TABLE dev.permission_audit_logs
+ALTER TABLE admin.permission_audit_logs
     ADD COLUMN IF NOT EXISTS request_id TEXT NULL;                 -- 요청 상관관계 ID (req_<uuid>)
-COMMENT ON COLUMN dev.permission_audit_logs.request_id IS '동일 요청에서 발생한 감사 항목 상관관계 ID (audit 표준 §5)';
+COMMENT ON COLUMN admin.permission_audit_logs.request_id IS '동일 요청에서 발생한 감사 항목 상관관계 ID (audit 표준 §5)';

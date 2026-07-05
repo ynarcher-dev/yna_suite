@@ -287,11 +287,11 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# Phase 1.4: dev.user_permissions → app_metadata.permissions/roles 주입(No-Join RLS 전제).
+# Phase 1.4: admin.user_permissions → app_metadata.permissions/roles 주입(No-Join RLS 전제).
 # (근거: yna_suite_auth_permissions.md §9, 0_CLAUDE.md §4)
 [auth.hook.custom_access_token]
 enabled = true
-uri = "pg-functions://postgres/dev/custom_access_token_hook"
+uri = "pg-functions://postgres/admin/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

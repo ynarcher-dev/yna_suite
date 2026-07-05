@@ -237,6 +237,19 @@
     *   **남긴 후속 작업(문서에 명시)**: ① `master_identifiers` 일괄 unique 인덱스를 강한 식별자 한정 부분 인덱스로 교체하는 migration(약한 식별자 저장 시작 전, 늦어도 Phase 2 — data_model §4.6). ② `hub.experts.user_id` 컬럼 추가 migration(Phase 2 외부 전문가 포털 선행 — rls_policy_matrix §14). ③ guest_expert 평가 제출 방식 결정(Phase 2).
     *   **검증**: typecheck/lint 20 태스크·단위 테스트 3패키지(utils/master-data/permissions) 통과, hub 프로덕션 빌드 + `/temporary-masters` smoke 200(TEMP-ST-2026-0092·TEMP-PT-2026-0044 렌더).
 
+## 1-15. 아키텍처 개편 메모 (Phase 1.15, 2026-07-04)
+
+### 📌 이슈 32: 다중 앱 → WORKS 단일 내부 앱 + GUEST 외부 앱 통합 (작성일자: 2026-07-04)
+*   **상황**: 기존 설계는 7개 서비스(hub/dev/work/mna/project/fund/management)를 각각 별도 Next.js 앱·별도 서브도메인으로 배포하는 구조였다. 기획자가 "1인 개발 규모에서 도메인 7개는 과하다 — 내부는 한 앱(섹션 구분), 외부만 분리하자"고 판단해 개편했다.
+*   **문제**: (1) 서브도메인 간 SSO 쿠키 공유·크로스도메인 API 인증이 복잡하고 미검증으로 남아 있었다. (2) 배포 설정·환경변수·Auth callback이 앱마다 7벌. (3) 앱 패키징(웹앱) 진입점이 불명확. (4) 실제로 만들어진 앱은 Hub/Dev 둘뿐이라 지금이 전환 적기였다.
+*   **해결** (기획자 결정: 문서+코드 전환 / 내부 이름도 전면 교체 / 관리 콘솔은 WORKS 안의 섹션):
+    *   **2앱 구조**: **Y&ARCHER WORKS**(내부 통합, `apps/works`, works.ynarcher.co.kr, 포트 3000) + **Y&ARCHER WORKS-GUEST**(외부 포털, `apps/guest`, guest.ynarcher.co.kr, 포트 3001, Phase 2 placeholder). 내부 7개 섹션(HUB/관리/AC/M&A/PROJECT/FUND/MANAGEMENT)은 도메인 권한으로 메뉴 노출을 제어(`buildWorksNav`).
+    *   **키 전면 교체**: 권한 도메인 = DB 스키마 키를 `dev`→`admin`, `work`→`ac`로 교체. `packages/core`(DOMAINS), `packages/config`(APP_CONFIGS 2앱·SECTION_CONFIGS 신설), `packages/permissions`(ROLE_TEMPLATE_MATRIX·테스트), `supabase/migrations` 10개 + config.toml hook, HTTP 경로 `/api/dev/*`→서버액션 `/admin/*`·`/api/mock/work`→`/api/mock/ac`. 역할 8종·hub/mna/project/fund/management/staging 유지.
+    *   **앱 통합**: 구 `apps/dev`의 6개 화면을 `apps/works`의 `/admin/*` 라우트로 이동(`dev-data`→`admin-data`, `components/users`→`components/admin`), AppShell 하나로 HUB·관리 섹션을 담고 현재 경로로 섹션을 판정(`sectionOfPath`)해 그 섹션 권한으로 게이트. `apps/hub`→`apps/works`(@yna/works), 구 도메인 placeholder 앱 5개 제거, `apps/guest` README placeholder 신설.
+    *   **검증**: typecheck/lint 18 태스크·단위 테스트 3패키지 통과. works 프로덕션 빌드 28 라우트(`/admin/*` 6 + HUB 화면 + `/temporary-masters`), smoke에서 `/`(WORKS · HUB)·`/admin/users`(WORKS · 관리)·`/domain-test` 등 200. 마이그레이션 SQL 오프라인 파서 173문 통과.
+    *   **미검증(이슈15 연장)**: Docker 미설치로 실제 로그인·RLS 적용·gen types·works↔guest 크로스오리진은 미검증. 로컬은 dev 폴백 세션(master 권한)으로 구동.
+    *   **문서**: docs 22개 전면 개편(명칭 Y&ARCHER WORKS 통일, dev→admin·work→ac 키, 2앱 도메인/포트/배포). 파일명·섹션 번호(§)는 교차 참조 보존 위해 유지. "기존 명칭" 열과 "구 Y&A Work" 병기는 대조용으로 남김.
+
 ## 2. 향후 추가 메모 (메모 작성 템플릿)
 
 개발 중 특이사항이 생기면 아래 형식으로 이어서 기록해 주세요.

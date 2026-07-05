@@ -1,6 +1,8 @@
-# Y&A Suite Hub/Dev Phase 1 기능 명세 가이드
+# Y&ARCHER WORKS — HUB·관리 섹션 Phase 1 기능 명세 가이드
 
-본 문서는 Phase 1에서 구축할 Y&A Hub와 Y&A Dev의 화면, 기능, 권한, 완료 기준을 정의한다.
+> 2026-07-04 아키텍처 개편: 다중 앱(Hub 앱/Dev 앱) 구조를 WORKS 단일 내부 앱의 **HUB 섹션·관리(ADMIN) 섹션**으로 통합했다(+ GUEST 외부 앱은 Phase 2). 파일명과 섹션 번호(§)는 교차 참조 보존을 위해 유지한다.
+
+본 문서는 Phase 1에서 구축할 WORKS 앱의 HUB 섹션과 관리(ADMIN) 섹션의 화면, 기능, 권한, 완료 기준을 정의한다. 관리 섹션 라우트는 `/admin/*`, HUB 섹션은 앱 기본 섹션으로 루트 경로를 사용한다.
 
 `yna_suite_phase1_scope.md`가 범위를 정한다면, 이 문서는 구현자가 화면 단위로 무엇을 만들어야 하는지 판단할 수 있게 하는 기능 명세이다.
 
@@ -20,36 +22,35 @@ RLS 매트릭스: yna_suite_rls_policy_matrix.md
 Phase 1의 기능 목표:
 
 ```txt
-Hub를 전사 마스터 원장으로 사용할 수 있다.
-Dev에서 사용자와 권한을 관리할 수 있다.
+HUB 섹션을 전사 마스터 원장으로 사용할 수 있다.
+관리 섹션에서 사용자와 권한을 관리할 수 있다.
 Supabase Auth와 권한/RLS가 실제로 연결된다.
-기존 스타트업 DB를 Hub로 이관할 수 있다.
+기존 스타트업 DB를 HUB로 이관할 수 있다.
 마스터 검색/임시 생성/중복 후보/수동 병합이 가능하다.
-Program First 기준 Work 연결 mock/test flow를 통과한다.
+Program First 기준 AC 연결(구 Y&A Work) mock/test flow를 통과한다.
 ```
 
 Phase 1에서 하지 않는 것:
 
 ```txt
-실제 Work 프로그램 운영
+실제 AC 프로그램 운영
 실제 Fund/M&A/Project/Management 업무 운영
-외부 스타트업 포털 완성
-외부 전문가 평가 포털 완성
+WORKS-GUEST 앱(Phase 2) 완성 — 외부 스타트업 포털/외부 전문가 평가 포털
 자동 병합
 고급 BI 대시보드
 ```
 
 ## 2. 공통 AppShell
 
-Hub와 Dev는 같은 AppShell을 사용한다.
+HUB 섹션과 관리 섹션은 WORKS 앱의 같은 AppShell을 사용한다.
 
 구성:
 
 ```txt
-좌측 sidebar
+좌측 sidebar (섹션별 메뉴 트리)
 상단 topbar
-서비스명/현재 사용자
-권한 기반 메뉴 표시
+섹션명/현재 사용자
+권한 기반 섹션/메뉴 표시
 content 영역
 ```
 
@@ -57,7 +58,7 @@ content 영역
 
 ```txt
 로그인하지 않은 사용자는 로그인으로 이동
-도메인 권한이 없으면 접근 불가 페이지 표시
+도메인 권한이 없으면 해당 섹션 접근 불가 페이지 표시
 읽기 전용 사용자는 쓰기 액션 숨김 또는 비활성화
 모바일에서는 drawer navigation 사용
 ```
@@ -65,8 +66,8 @@ content 영역
 완료 기준:
 
 ```txt
-Hub/Dev 모두 같은 레이아웃 사용
-권한 없는 메뉴가 노출되지 않음
+HUB/관리 섹션 모두 같은 레이아웃 사용
+권한 없는 섹션/메뉴가 노출되지 않음 (관리 섹션은 master 등 관리 권한자만)
 키보드 포커스 표시
 모바일에서 주요 화면 깨짐 없음
 ```
@@ -96,13 +97,13 @@ auth callback 처리
 완료 기준:
 
 ```txt
-master 사용자는 Hub/Dev 접근 가능
-viewer는 Hub read 가능, Dev 접근 불가
-no_permission은 Hub/Dev 접근 불가
+master 사용자는 HUB/관리 섹션 접근 가능
+viewer는 HUB read 가능, 관리 섹션(/admin/*) 접근 불가
+no_permission은 HUB/관리 섹션 접근 불가
 만료된 권한은 접근 불가
 ```
 
-## 4. Hub 대시보드
+## 4. HUB 대시보드
 
 목적:
 
@@ -138,7 +139,7 @@ pending merge candidate 수
 최근 항목 클릭 시 관련 상세로 이동
 ```
 
-## 5. Hub 통합 검색
+## 5. HUB 통합 검색
 
 목적:
 
@@ -337,9 +338,9 @@ LP/자문사/수행기관 등 partner_type 관리 가능
 사용 경로:
 
 ```txt
-Hub 직접 생성
-Mock Work 신청 흐름
-향후 Work/M&A/Fund 등 도메인 앱
+HUB 직접 생성
+Mock AC 신청 흐름
+향후 AC/M&A/Fund 등 업무 섹션
 ```
 
 필수 입력:
@@ -462,8 +463,8 @@ audit_logs 기록
 
 ```txt
 1단계 병합 실패 시 source/target 변경 전체 rollback
-비동기 반영 전에도 Work mock 신청이 최종 target master로 resolve됨
-비동기 반영 완료 후 Work mock 신청 FK가 target으로 이동
+비동기 반영 전에도 AC mock 신청이 최종 target master로 resolve됨
+비동기 반영 완료 후 AC mock 신청 FK가 target으로 이동
 merge_events.affected_records 기록
 merge_events.sync_status 기록
 source 상세에서 target으로 이동 링크 표시
@@ -548,9 +549,9 @@ entity_type 필터, 검색
 목적:
 
 ```txt
-Hub 전체의 감사 로그(hub.audit_logs — 마스터 변경, 병합, 민감정보 원본 조회,
-import 실행 등)를 기본 조회한다. Dev의 권한 감사 로그(dev.permission_audit_logs)
-조회 화면은 §16 사용자 상세/전용 화면에서 별도 제공한다.
+HUB 전체의 감사 로그(hub.audit_logs — 마스터 변경, 병합, 민감정보 원본 조회,
+import 실행 등)를 기본 조회한다. 관리 섹션의 권한 감사 로그(admin.permission_audit_logs)
+조회 화면은 §16 사용자 상세/전용 화면(/admin/permission-audit-logs)에서 별도 제공한다.
 ```
 
 필수 컬럼:
@@ -572,7 +573,7 @@ before/after 상세(민감필드 마스킹 스냅샷)
 로그 수정/삭제 불가(append-only)
 ```
 
-## 15. Dev 사용자 목록
+## 15. 관리 섹션 사용자 목록 (/admin/users)
 
 필수 컬럼:
 
@@ -598,18 +599,18 @@ created_at
 권한:
 
 ```txt
-dev read: 목록 조회
-dev write: 초대/수정
+admin read: 목록 조회
+admin write: 초대/수정
 ```
 
 완료 기준:
 
 ```txt
-Dev 권한 없는 사용자는 접근 불가
-읽기 전용 Dev 사용자는 초대 불가
+admin 권한 없는 사용자는 접근 불가
+읽기 전용 admin 사용자는 초대 불가
 ```
 
-## 16. Dev 사용자 상세
+## 16. 관리 섹션 사용자 상세 (/admin/users/{id})
 
 필수 섹션:
 
@@ -643,12 +644,12 @@ expires_at은 JWT 권한 claim과 RLS helper 만료 검증에 반영
 master 권한 변경은 확인 dialog
 ```
 
-## 17. 권한 매트릭스 화면
+## 17. 권한 매트릭스 화면 (/admin/permission-matrix)
 
 목적:
 
 ```txt
-사용자별 서비스 권한을 한눈에 관리한다.
+사용자별 섹션(도메인) 권한을 한눈에 관리한다.
 ```
 
 필수 기능:
@@ -670,7 +671,7 @@ scope 표시
 저장 후 audit log 기록
 ```
 
-## 18. 권한 템플릿
+## 18. 권한 템플릿 (/admin/permission-templates)
 
 초기 템플릿:
 
@@ -702,7 +703,7 @@ Phase 1 제외:
 
 ## 19. 외부 사용자 연결
 
-외부 사용자는 반드시 대상 마스터와 연결된다.
+외부 사용자(guest_startup/guest_expert)는 WORKS-GUEST 앱(Phase 2) 사용자이며, 반드시 대상 마스터와 연결된다.
 
 guest_startup:
 
@@ -725,33 +726,33 @@ scope_type=self
 ```txt
 Phase 1 (연결/차단만 검증):
   외부 사용자 계정을 마스터에 연결할 수 있다
-  외부 사용자는 Hub/Dev 직접 접근 불가 (차단 테스트 통과)
+  외부 사용자는 WORKS 앱(전 섹션) 직접 접근 불가 (차단 테스트 통과)
 
-Phase 2 (외부 포털 — yna_suite_phase1_scope.md §12 범위):
+Phase 2 (WORKS-GUEST 앱 — yna_suite_phase1_scope.md §12 범위):
   자기 회사/자기 배정 데이터만 조회 (scope 격리)
   타사/타인 데이터 접근 실패 테스트 통과
 ```
 
-## 20. Work 연결 Mock/Test 화면 또는 Script
+## 20. AC 연결(구 Y&A Work) Mock/Test 화면 또는 Script
 
-Phase 1 필수 검증:
+Phase 1 필수 검증 (mock API: `/api/mock/ac/*`):
 
 ```txt
-work 권한 사용자 생성
-Mock Work 프로그램 생성
-Mock Work 프로그램 모듈 생성
-기존 Hub 스타트업 검색
-Mock Work 신청 생성
+ac 권한 사용자 생성
+Mock AC 프로그램 생성
+Mock AC 프로그램 모듈 생성
+기존 HUB 스타트업 검색
+Mock AC 신청 생성
 신규 임시 스타트업 생성
 중복 후보 생성
 병합 승인
-Mock Work 신청 FK 이동 확인
-Mock Work 커스텀 activity 생성
-Mock Work 회의록/첨부파일 연결 확인
+Mock AC 신청 FK 이동 확인
+Mock AC 커스텀 activity 생성
+Mock AC 회의록/첨부파일 연결 확인
 audit/merge event 확인
 ```
 
-Mock Work가 전제로 하는 서비스 구조:
+Mock AC가 전제로 하는 섹션 구조:
 
 ```txt
 프로그램은 최상위 실행 단위이다.
@@ -787,8 +788,8 @@ updated_at
 구현 선택:
 
 ```txt
-Hub 내부 테스트 화면
-scripts/mock-domain/work-application-flow
+HUB 섹션 내 테스트 화면 (/domain-test)
+scripts/mock-domain/ac-application-flow (구 work-application-flow)
 둘 다 가능
 ```
 
@@ -808,26 +809,26 @@ production에서는 mock 기능 비활성화
 | Master Detail | hub read | 수정/식별자/별칭 |
 | Merge Candidates | merge 권한 | 승인/반려 |
 | Temporary Masters | hub read | 없음 (액션은 상세/검토 화면에서) |
-| Audit Logs (Hub) | hub read | 없음 (append-only) |
+| Audit Logs (HUB) | hub read | 없음 (append-only) |
 | Import Batches | hub/admin | 재처리 |
-| Dev Users | dev read | 초대/수정 |
-| Permission Matrix | dev read | 권한 변경 |
-| Work Mock Program Flow | work read | mock 프로그램/모듈/신청/activity/회의록 생성 |
+| 관리 섹션 Users (/admin/users) | admin read | 초대/수정 |
+| Permission Matrix (/admin/permission-matrix) | admin read | 권한 변경 |
+| AC Mock Program Flow | ac read | mock 프로그램/모듈/신청/activity/회의록 생성 |
 
 ## 22. 완료 기준
 
 Phase 1 완료 조건:
 
 ```txt
-Hub/Dev 로그인 가능
+WORKS 로그인 가능 (HUB/관리 섹션)
 권한 없는 사용자 차단
-Hub 마스터 CRUD 가능
+HUB 마스터 CRUD 가능
 식별자/별칭/이력 저장 가능
 중복 후보 생성 가능
 수동 병합 가능
-Dev 사용자 초대/권한 부여 가능
+관리 섹션에서 사용자 초대/권한 부여 가능
 권한 변경 감사 로그 기록
-Work mock/test flow 통과
+AC mock/test flow 통과
 staging smoke test 통과
 ```
 
@@ -845,7 +846,7 @@ Unit test:
 RLS test:
 
 ```txt
-역할별 Hub/Dev 접근
+역할별 hub/admin 도메인 접근
 외부 사용자 제한
 읽기/쓰기 분리
 ```
@@ -854,21 +855,21 @@ E2E:
 
 ```txt
 로그인
-Hub 마스터 생성
+HUB 마스터 생성
 임시 마스터 생성
 중복 후보 병합
-Dev 권한 변경
-Work mock flow
+관리 섹션 권한 변경
+AC mock flow
 ```
 
 ## 24. 최종 요약
 
-Phase 1의 Hub/Dev 기능은 다음을 완성해야 한다.
+Phase 1의 HUB·관리 섹션 기능은 다음을 완성해야 한다.
 
 ```txt
-Hub = 마스터 검색, 등록, 식별자, 별칭, 중복 후보, 병합
-Dev = 사용자, 권한 템플릿, 도메인 권한, scope, 감사 로그
-공통 = 로그인, 권한 차단, RLS, AppShell, mock Work 연결 검증
+HUB 섹션 = 마스터 검색, 등록, 식별자, 별칭, 중복 후보, 병합
+관리 섹션(/admin/*) = 사용자, 권한 템플릿, 도메인 권한, scope, 감사 로그
+공통 = 로그인, 권한 차단, RLS, AppShell, mock AC 연결 검증
 ```
 
-Phase 1의 성공 기준은 화면 수가 많아지는 것이 아니라, 이후 Work/Fund/M&A/Project/Management가 같은 계약으로 붙을 수 있는 기반이 실제로 검증되는 것이다.
+Phase 1의 성공 기준은 화면 수가 많아지는 것이 아니라, 이후 AC/Fund/M&A/Project/Management 섹션과 GUEST 앱이 같은 계약으로 붙을 수 있는 기반이 실제로 검증되는 것이다.

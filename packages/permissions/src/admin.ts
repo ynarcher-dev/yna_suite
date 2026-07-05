@@ -132,8 +132,8 @@ export function diffPermissions(before: PermissionMap, after: PermissionMap): Pe
  * (근거: functional_spec §16 — master 권한 변경은 확인 dialog)
  */
 export function isMasterLevelChange(before: PermissionMap, after: PermissionMap): boolean {
-  const beforeDevWrite = before.dev?.can_write ?? false;
-  const afterDevWrite = after.dev?.can_write ?? false;
+  const beforeDevWrite = before.admin?.can_write ?? false;
+  const afterDevWrite = after.admin?.can_write ?? false;
   return beforeDevWrite !== afterDevWrite;
 }
 
@@ -187,13 +187,13 @@ export function externalLinkGrant(kind: ExternalUserKind, masterId: string): Ext
   const role: RoleTemplate = kind;
   const base = templatePermissions(role);
   const scopeType: ScopeType = kind === "guest_startup" ? "company" : "self";
-  const work = base.work;
-  if (work) {
-    base.work = { ...work, scope_type: scopeType, scope_id: masterId };
+  const ac = base.ac;
+  if (ac) {
+    base.ac = { ...ac, scope_type: scopeType, scope_id: masterId };
   }
   // 방어적: 외부 사용자는 hub/dev 접근을 갖지 않는다.
   delete base.hub;
-  delete base.dev;
+  delete base.admin;
   return { role, permissions: base };
 }
 
