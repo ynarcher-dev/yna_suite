@@ -11,7 +11,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 
 /**
  * Hub 대시보드. 전사 마스터 현황과 최근 데이터 품질 이벤트를 보여준다.
- * (근거: yna_suite_hub_dev_functional_spec.md §4, information_architecture.md §4)
+ * (근거: yna_suite_hub_admin_functional_spec.md §4, information_architecture.md §4)
  * 숫자는 mock 스토어(실 DB 대체, 이슈21) 기준으로 실제 집계된다.
  */
 export default async function DashboardPage() {

@@ -11,7 +11,7 @@ import { ROLE_DEFAULT_SCOPE, templatePermissions } from "./templates";
 
 /**
  * Dev 사용자·권한 관리(Phase 1.5)의 순수 권한 변경 로직.
- * (근거: yna_suite_hub_dev_functional_spec.md §16~19, yna_suite_api_contracts.md §17~18,
+ * (근거: yna_suite_hub_admin_functional_spec.md §16~19, yna_suite_api_contracts.md §17~18,
  *        yna_suite_auth_permissions.md §6·§9, 0_CLAUDE.md §4)
  *
  * 여기 함수는 DB/네트워크에 의존하지 않는 순수 함수로, RLS helper(dev.*) 및

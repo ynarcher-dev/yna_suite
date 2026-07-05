@@ -3,7 +3,7 @@ import { cn } from "../cn";
 
 /**
  * BulkActionBar. 목록에서 여러 행 선택 시 나타나는 일괄 액션 바.
- * (근거: yna_suite_design_system.md §12, yna_suite_hub_dev_functional_spec.md — 대량 처리)
+ * (근거: yna_suite_design_system.md §12, yna_suite_hub_admin_functional_spec.md — 대량 처리)
  *
  * 선택 개수와 액션 버튼(children)을 표시한다. count 가 0 이면 렌더하지 않는다.
  */

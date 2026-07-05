@@ -59,7 +59,7 @@ Phase 1 범위, 화면, 메뉴, 라우트:
 
 ```txt
 docs/yna_suite_phase1_scope.md
-docs/yna_suite_hub_dev_functional_spec.md
+docs/yna_suite_hub_admin_functional_spec.md
 docs/yna_suite_information_architecture.md
 ```
 

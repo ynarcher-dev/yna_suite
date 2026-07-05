@@ -2,7 +2,7 @@ import type { EntityType } from "@yna/core";
 
 /**
  * Hub 마스터 화면(대시보드·통합 검색·스타트업 마스터)의 도메인 타입.
- * (근거: yna_suite_hub_dev_functional_spec.md §4~7, yna_suite_data_model.md §4)
+ * (근거: yna_suite_hub_admin_functional_spec.md §4~7, yna_suite_data_model.md §4)
  *
  * 실제 조회/변경은 Docker/staging 에서 hub 스키마에 연결하고(이슈19·21),
  * 현재는 mock seam 으로 화면·배선·안전장치·감사 흐름을 검증한다.

@@ -1,6 +1,6 @@
 -- Phase 1.12 — staging 이관(import) 테이블
 -- 근거: yna_suite_data_model.md §11, yna_suite_migration_strategy.md §5~6·15~16,
---       yna_suite_hub_dev_functional_spec.md §14
+--       yna_suite_hub_admin_functional_spec.md §14
 --
 -- 목적: 기존 스타트업 DB/엑셀/시트를 Hub 마스터로 이관하기 전 원본값·매핑값·정규화값과
 --       처리 결과(연결/생성/후보/실패)를 batch 단위로 보존한다.
